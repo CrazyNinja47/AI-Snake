@@ -1,6 +1,8 @@
 import argparse, pygame, sys, os, random
 from pygame.locals import *
+import minimax as minimax
 
+using_minimax = True
 
 
 # Stores the GameState for use in AI.
@@ -30,14 +32,14 @@ class GameState:
 
     def get_children(self):
         directions = ["LEFT", "RIGHT", "STRAIGHT"]
-        children = []
+        children_with_moves = []
 
         for self_direction in directions:
             for opponent_direction in directions:
                 new_state = self.next_state(self_direction, opponent_direction)
-                children.append(new_state)
+                children_with_moves.append((new_state, self_direction))
 
-        return children
+        return children_with_moves
 
     def is_terminal(self):
         return self.winner != None
@@ -92,7 +94,7 @@ class GameState:
                     new_gs.player2.tail[i - 1][1],
                 )
 
-        if new_gs.player1.x == food_x and new_gs.player1.y == food_y:
+        if new_gs.player1.x == new_gs.food[0] and new_gs.player1.y == new_gs.food[1]:
             new_gs.player1.tail.insert(
                 0,
                 (
@@ -100,11 +102,11 @@ class GameState:
                     new_gs.player1.y + new_gs.player1.direction[1],
                 ),
             )
-            new_gs.player1.x = food_x + new_gs.player1.direction[0]
-            new_gs.player1.y = food_y + new_gs.player1.direction[1]
+            new_gs.player1.x = new_gs.food[0] + new_gs.player1.direction[0]
+            new_gs.player1.y = new_gs.food[1] + new_gs.player1.direction[1]
             new_gs.player1.length += 1
 
-        elif new_gs.player2.x == food_x and new_gs.player2.y == food_y:
+        elif new_gs.player2.x == new_gs.food[0] and new_gs.player2.y == new_gs.food[1]:
             new_gs.player2.tail.insert(
                 0,
                 (
@@ -112,8 +114,8 @@ class GameState:
                     new_gs.player2.y + new_gs.player2.direction[1],
                 ),
             )
-            new_gs.player2.x = food_x + new_gs.player2.direction[0]
-            new_gs.player2.y = food_y + new_gs.player2.direction[1]
+            new_gs.player2.x = new_gs.food[0] + new_gs.player2.direction[0]
+            new_gs.player2.y = new_gs.food[1] + new_gs.player2.direction[1]
             new_gs.player2.length += 1
 
         if (
@@ -127,7 +129,7 @@ class GameState:
             or new_gs.player2.x < 0
             or new_gs.player2.y < 0
         ):
-            winner = 0
+            new_gs.winner = 0
         else:
             if (
                 new_gs.player1.x >= TILES_X
@@ -135,40 +137,40 @@ class GameState:
                 or new_gs.player1.x < 0
                 or new_gs.player1.y < 0
             ):
-                if winner == None:
-                    winner = 2
+                if new_gs.winner == None:
+                    new_gs.winner = 2
                 else:
-                    winner = 0
+                    new_gs.winner = 0
             elif (
                 new_gs.player2.x >= TILES_X
                 or new_gs.player2.y >= TILES_Y
                 or new_gs.player2.x < 0
                 or new_gs.player2.y < 0
             ):
-                if winner == None:
-                    winner = 1
+                if new_gs.winner == None:
+                    new_gs.winner = 1
                 else:
-                    winner = 0
+                    new_gs.winner = 0
 
         ## check game over (touch)
         if (
             new_gs.player1.x == new_gs.player2.x
             and new_gs.player1.y == new_gs.player2.y
         ):
-            winner = 0
+            new_gs.winner = 0
         else:
             for i in new_gs.player1.tail:
                 if i[0] == new_gs.player2.x and i[1] == new_gs.player2.y:
-                    if winner == None:
-                        winner = 1
+                    if new_gs.winner == None:
+                        new_gs.winner = 1
                     else:
-                        winner = 0
+                        new_gs.winner = 0
             for i in new_gs.player2.tail:
                 if i[0] == new_gs.player1.x and i[1] == new_gs.player1.y:
-                    if winner == None:
-                        winner = 2
+                    if new_gs.winner == None:
+                        new_gs.winner = 2
                     else:
-                        winner = 0
+                        new_gs.winner = 0
 
         return new_gs
 
@@ -191,7 +193,7 @@ arg_parser.add_argument(
     metavar="PX",
     help="the size of a tile",
     type=int,
-    default=12,
+    default=24,
 )
 arg_parser.add_argument(
     "-t",
@@ -374,13 +376,23 @@ while winner == None:
                 p1.right = True
                 p1.left = False
                 p1.turn()
-            elif event.key == K_LEFT:
+            elif (event.key == K_LEFT) and not using_minimax:
                 p2.left = True
                 p2.right = False
                 p2.turn()
-            elif event.key == K_RIGHT:
+            elif (event.key == K_RIGHT) and not using_minimax:
                 p2.right = True
                 p2.left = False
+                p2.turn()
+        if minimax:
+            move = minimax.decide_move(gs, 10)
+            if move == "LEFT":
+                p2.left = True
+                p2.right = False
+                p2.turn()
+            elif move == "RIGHT":
+                p2.left = False
+                p2.right = True
                 p2.turn()
 
     p1.left = False

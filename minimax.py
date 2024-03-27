@@ -1,5 +1,3 @@
-from snakebattle import GameState
-
 # Main issue with minimax is we need to get future states, to be added to GameState
 
 
@@ -28,9 +26,12 @@ def heuristic(game_state):
         score /= player_distance
 
     # Reward heavily for moving towards food
-    food_distance = abs(player2.x - food_x) + abs(player2.y - food_y)
-    dis_score = 1 / (food_distance + 0.1)
-    dis_score *= 5
+    if (food_x is not None) and (food_y is not None):
+        food_distance = abs(player2.x - food_x) + abs(player2.y - food_y)
+        dis_score = 1 / (food_distance + 0.1)
+        dis_score *= 5
+    else:
+        dis_score = 0
 
     score += dis_score
 
@@ -45,37 +46,43 @@ def heuristic(game_state):
 
 def minimax(game_state, depth, alpha, beta, maximizing_player):
     if depth == 0 or game_state.is_terminal():
-        return heuristic(game_state)
+        return heuristic(game_state), None
 
     if maximizing_player:
         max_eval = float("-inf")
-        for child in game_state.get_children():
-            eval = minimax(child, depth - 1, alpha, beta, False)
-            max_eval = max(max_eval, eval)
+        best_move = None
+        for child, move in game_state.get_children():
+            eval, _ = minimax(child, depth - 1, alpha, beta, False)
+            if eval > max_eval:
+                max_eval = eval
+                best_move = move
             alpha = max(alpha, eval)
             if beta <= alpha:
                 break
-        return max_eval
+        return max_eval, best_move
     else:
         min_eval = float("inf")
-        for child in game_state.get_children():
-            eval = minimax(child, depth - 1, alpha, beta, True)
-            min_eval = min(min_eval, eval)
+        best_move = None
+        for child, move in game_state.get_children():
+            eval, _ = minimax(child, depth - 1, alpha, beta, True)
+            if eval < min_eval:
+                min_eval = eval
+                best_move = move
             beta = min(beta, eval)
             if beta <= alpha:
                 break
-        return min_eval
+        return min_eval, best_move
 
 
 def iterative_deepening(game_state, max_depth):
-
     best_move = None
     for depth in range(1, max_depth + 1):
-        best_move = minimax(game_state, depth, float("-inf"), float("inf"), True)
+        _, move = minimax(game_state, depth, float("-inf"), float("inf"), True)
+        if move:  # Update best_move only if a move is found
+            best_move = move
     return best_move
 
 
 def decide_move(game_state, max_depth):
-
     best_move = iterative_deepening(game_state, max_depth)
     return best_move
