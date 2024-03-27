@@ -1,15 +1,15 @@
 # Snake Battle
 
-Play **Snake** with two players
+Modified version of Snake Battle for a class project, using various AI models to play against.
 
-**THIS GAME IS ALSO PLAYABLE ON A RASPBERRY PI USING GPIO INPUTS!**
+Play **Snake** with two players
 
 ## Python and Requirements Installation
 
 ### Windows
 
 - Download the latest Python 2 release from [here](https://www.python.org/downloads/windows/)
-- Run the installer (make sure to include *pip*)
+- Run the installer (make sure to include _pip_)
 - Open `cmd.exe` as administrator and install the required packages by running `pip2 install <package>` or `python2 -m pip install <package>`
 
 ### Linux
@@ -24,7 +24,7 @@ Play **Snake** with two players
 
 ## Setup Font
 
-Before starting the game go to line *68* and *69* and change `None` to the path of a font file. If you don't specify a font Pygame will choose a default one.
+Before starting the game go to line _68_ and _69_ and change `None` to the path of a font file. If you don't specify a font Pygame will choose a default one.
 
 I recommend using [VT323 by Peter Hull](https://fonts.google.com/specimen/VT323 "Google Fonts")
 
@@ -69,14 +69,3 @@ The game is tested with **Python v2.7**, feel free to use any other compatible v
       -d, --debug           show debug information on the screen
       -f TPS, --fps TPS     framerate in ticks per second
       -b MS, --delay MS     button delay (raspi mode)
-
-## Raspberry Pi Mode (`--raspi`)
-
-Connect buttons to the following GPIO pins (BCM numbering)
-
-- Player 1 Left: **25**
-- Player 1 Right: **24**
-- Player 2 Left: **23**
-- Player 2 Right: **18**
-
-Alternatively, you can use other pins and change the pin numbers on lines *23 - 26*.
