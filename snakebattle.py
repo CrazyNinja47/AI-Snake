@@ -1,6 +1,9 @@
 import argparse, pygame, sys, os, random
 from pygame.locals import *
 import minimax as minimax
+import copy
+
+max_depth = 3
 
 using_minimax = True
 
@@ -9,34 +12,26 @@ using_minimax = True
 # Needs to be able to determine future states for minimax.
 class GameState:
 
-    _instance = None
-
-    def __new__(cls, *args, **kwargs):
-        if not cls._instance:
-            cls._instance = super(GameState, cls).__new__(cls, *args, **kwargs)
-        return cls._instance
-
     def __init__(self, player1=None, player2=None, food=None, winner=None):
-        if not hasattr(self, "initialized"):
-            self.player1 = player1
-            self.player2 = player2
-            self.food = food
-            self.winner = winner
-            self.initialized = True
+        self.player1 = copy.deepcopy(player1)
+        self.player2 = copy.deepcopy(player2)
+        self.food = food
+        self.winner = winner
+        self.initialized = True
 
     def update(self, player1, player2, food, winner):
-        self.player1 = player1
-        self.player2 = player2
+        self.player1 = copy.deepcopy(player1)
+        self.player2 = copy.deepcopy(player2)
         self.food = food
         self.winner = winner
 
     def get_children(self):
-        directions = ["LEFT", "RIGHT", "STRAIGHT"]
+        directions = ["STRAIGHT", "LEFT", "RIGHT"]
         children_with_moves = []
 
-        for self_direction in directions:
-            for opponent_direction in directions:
-                new_state = self.next_state(self_direction, opponent_direction)
+        for opp_direction in directions:
+            for self_direction in directions:
+                new_state = self.next_state(self_direction, opp_direction)
                 children_with_moves.append((new_state, self_direction))
 
         return children_with_moves
@@ -44,11 +39,18 @@ class GameState:
     def is_terminal(self):
         return self.winner != None
 
+    def to_string(self):
+        return f"Player1: [{self.player1.x}, {self.player1.y}] | Player2: [{self.player2.x}, {self.player2.y}] | Food: [{self.food[0]}, {self.food[1]}] | Winner: {self.winner}"
+
     def next_state(self, self_direction, opp_direction):
         # We need to return game state after a movement step.
         # Probably can copy logic from below, perform a predicted step, and return the state.
-        new_gs = GameState(self.player1, self.player2, self.food, self.winner)
-
+        new_gs = GameState(
+            copy.deepcopy(self.player1),
+            copy.deepcopy(self.player2),
+            self.food,
+            self.winner,
+        )
         if self_direction == "LEFT":
             new_gs.player2.left = True
             new_gs.player2.right = False
@@ -172,6 +174,7 @@ class GameState:
                     else:
                         new_gs.winner = 0
 
+        # print(new_gs.to_string())
         return new_gs
 
 
@@ -282,7 +285,7 @@ winner = None
 
 
 ## print game over message
-def game_over_msg():
+def game_over_msg(winner):
     if winner == 0:
         if p1.length == p2.length:
             draw = FONT_SC.render("Draw!", 1, COLOR_FG)
@@ -384,16 +387,16 @@ while winner == None:
                 p2.right = True
                 p2.left = False
                 p2.turn()
-        if minimax:
-            move = minimax.decide_move(gs, 10)
-            if move == "LEFT":
-                p2.left = True
-                p2.right = False
-                p2.turn()
-            elif move == "RIGHT":
-                p2.left = False
-                p2.right = True
-                p2.turn()
+    if minimax:
+        move = minimax.decide_move(gs, max_depth)
+        if move == "LEFT":
+            p2.left = True
+            p2.right = False
+            p2.turn()
+        elif move == "RIGHT":
+            p2.left = False
+            p2.right = True
+            p2.turn()
 
     p1.left = False
     p1.right = False
@@ -511,7 +514,7 @@ while winner == None:
                     winner = 0
 
     if winner != None:
-        game_over_msg()
+        game_over_msg(winner)
 
     ## debugging
     if DEBUG:
