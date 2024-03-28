@@ -178,18 +178,30 @@ class GameState:
         ):
             new_gs.winner = 0
         else:
-            for i in new_gs.player1.tail:
+            for index, i in enumerate(new_gs.player1.tail):
                 if i[0] == new_gs.player2.x and i[1] == new_gs.player2.y:
                     if new_gs.winner == None:
                         new_gs.winner = 1
                     else:
                         new_gs.winner = 0
-            for i in new_gs.player2.tail:
+                if index > 0:
+                    if i[0] == new_gs.player1.x and i[1] == new_gs.player1.y:
+                        if new_gs.winner == None:
+                            new_gs.winner = 2
+                        else:
+                            new_gs.winner = 0
+            for index, i in enumerate(new_gs.player2.tail):
                 if i[0] == new_gs.player1.x and i[1] == new_gs.player1.y:
                     if new_gs.winner == None:
                         new_gs.winner = 2
                     else:
                         new_gs.winner = 0
+                if index > 0:
+                    if i[0] == new_gs.player2.x and i[1] == new_gs.player2.y:
+                        if new_gs.winner == None:
+                            new_gs.winner = 1
+                        else:
+                            new_gs.winner = 0
 
         # print(new_gs.to_string())
         return new_gs
@@ -536,18 +548,29 @@ while winner == None:
     if p1.x == p2.x and p1.y == p2.y:
         winner = 0
     else:
-        for i in p1.tail:
+        for index, i in enumerate(p1.tail):
             if i[0] == p2.x and i[1] == p2.y:
                 if winner == None:
                     winner = 1
                 else:
                     winner = 0
-        for i in p2.tail:
+            if index > 0:
+                if i[0] == p1.x and i[1] == p1.y:
+                    if winner == None:
+                        winner = 2
+                    else:
+                        winner = 0
+
+        for index, i in enumerate(p2.tail):
             if i[0] == p1.x and i[1] == p1.y:
                 if winner == None:
                     winner = 2
                 else:
                     winner = 0
+            if index > 0:
+                if i[0] == p2.x and i[1] == p2.y:
+                    if winner == None:
+                        winner = 1
 
     if winner != None:
         game_over_msg(winner)
