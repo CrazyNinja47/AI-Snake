@@ -22,9 +22,9 @@ def heuristic(game_state, player):
 
     # Reward for moving perpendicular to opponent
     # if player2.direction in ["UP", "DOWN"] and player1.direction in ["LEFT", "RIGHT"]:
-    #     score += 1
+    #     score += 10
     # elif player2.direction in ["LEFT", "RIGHT"] and player1.direction in ["UP", "DOWN"]:
-    #     score += 1
+    #     score += 10
 
     aggro_score = 0
     # Reward for being close to the opponent as it gets longer
@@ -36,7 +36,7 @@ def heuristic(game_state, player):
             aggro_score *= player1.length * 10
         # If there is no food on the map, act much more aggressively - otherwise it will just go in circles
         if (food_x is None) or (food_y is None):
-            aggro_score *= 50
+            aggro_score *= 10
 
     score += aggro_score
 
@@ -53,29 +53,6 @@ def heuristic(game_state, player):
         dis_score = 0
 
     score -= dis_score
-
-    # print(f"[{player2.x}, {int(player2.y)}] [{food_x}, {food_y}], {food_distance}")
-
-    # if (food_x is not None) and (food_y is not None):
-    #     if player == 2:
-    #         if (int(player2.x) == int(food_x)) and (int(player2.y) == int(food_y)):
-    #             score += 100
-    #     else:
-    #         if (int(player1.x) == int(food_x)) and (int(player1.y) == int(food_y)):
-    #             score += 100
-
-    # for i in player1.tail:
-    #     if i[0] == player2.x and i[1] == player2.y:
-    #         if player == 1:
-    #             score += 10000
-    #         else:
-    #             score -= 10000
-    # for i in player2.tail:
-    #     if i[0] == player1.x and i[1] == player1.y:
-    #         if player == 2:
-    #             score += 10000
-    #         else:
-    #             score -= 10000
 
     # Reward for winning or losing
     if player == 2:
