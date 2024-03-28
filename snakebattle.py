@@ -3,9 +3,14 @@ from pygame.locals import *
 import minimax as minimax
 import copy
 
-max_depth = 3
+FRAME_RATE = 24
+MAP_SIZE = [70, 50]
+TILE_SIZE = 24
 
-using_minimax = True
+MAX_DEPTH = 3
+
+using_minimax_1 = True
+using_minimax_2 = True
 
 
 # Stores the GameState for use in AI.
@@ -25,13 +30,13 @@ class GameState:
         self.food = food
         self.winner = winner
 
-    def get_children(self):
+    def get_children(self, player):
         directions = ["STRAIGHT", "LEFT", "RIGHT"]
         children_with_moves = []
 
         for opp_direction in directions:
             for self_direction in directions:
-                new_state = self.next_state(self_direction, opp_direction)
+                new_state = self.next_state(self_direction, opp_direction, player)
                 children_with_moves.append((new_state, self_direction))
 
         return children_with_moves
@@ -42,9 +47,15 @@ class GameState:
     def to_string(self):
         return f"Player1: [{self.player1.x}, {self.player1.y}] | Player2: [{self.player2.x}, {self.player2.y}] | Food: [{self.food[0]}, {self.food[1]}] | Winner: {self.winner}"
 
-    def next_state(self, self_direction, opp_direction):
+    def next_state(self, self_direction, opp_direction, player):
         # We need to return game state after a movement step.
         # Probably can copy logic from below, perform a predicted step, and return the state.
+
+        if player == 1:
+            temp = opp_direction
+            opp_direction = self_direction
+            self_direction = temp
+
         new_gs = GameState(
             copy.deepcopy(self.player1),
             copy.deepcopy(self.player2),
@@ -196,7 +207,7 @@ arg_parser.add_argument(
     metavar="PX",
     help="the size of a tile",
     type=int,
-    default=24,
+    default=TILE_SIZE,
 )
 arg_parser.add_argument(
     "-t",
@@ -206,7 +217,7 @@ arg_parser.add_argument(
     metavar=("X", "Y"),
     help="the number of tiles",
     type=int,
-    default=[70, 50],
+    default=MAP_SIZE,
 )
 arg_parser.add_argument(
     "-d",
@@ -222,7 +233,7 @@ arg_parser.add_argument(
     metavar="TPS",
     help="framerate in ticks per second",
     type=int,
-    default=12,
+    default=FRAME_RATE,
 )
 arg_parser.add_argument(
     "-b",
@@ -371,24 +382,36 @@ while winner == None:
             sys.exit()
         ## keyboard mode
         elif event.type == KEYDOWN and not args.raspi:
-            if event.key == K_a:
+            if (event.key == K_a) and not using_minimax_1:
                 p1.left = True
                 p1.right = False
                 p1.turn()
-            elif event.key == K_d:
+            elif (event.key == K_d) and not using_minimax_1:
                 p1.right = True
                 p1.left = False
                 p1.turn()
-            elif (event.key == K_LEFT) and not using_minimax:
+            elif (event.key == K_LEFT) and not using_minimax_2:
                 p2.left = True
                 p2.right = False
                 p2.turn()
-            elif (event.key == K_RIGHT) and not using_minimax:
+            elif (event.key == K_RIGHT) and not using_minimax_2:
                 p2.right = True
                 p2.left = False
                 p2.turn()
-    if minimax:
-        move = minimax.decide_move(gs, max_depth)
+
+    if using_minimax_1:
+        move = minimax.decide_move(gs, MAX_DEPTH, 1)
+        if move == "LEFT":
+            p1.left = True
+            p1.right = False
+            p1.turn()
+        elif move == "RIGHT":
+            p1.left = False
+            p1.right = True
+            p1.turn()
+
+    if using_minimax_2:
+        move = minimax.decide_move(gs, MAX_DEPTH, 2)
         if move == "LEFT":
             p2.left = True
             p2.right = False
