@@ -48,7 +48,7 @@ def heuristic(game_state, player):
             food_distance = abs(player2.x - food_x) + abs(player2.y - food_y)
         else:
             food_distance = abs(player1.x - food_x) + abs(player1.y - food_y)
-        dis_score = food_distance
+        dis_score = food_distance * 2
     else:
         dis_score = 0
 
