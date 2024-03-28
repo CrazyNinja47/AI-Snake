@@ -8,8 +8,10 @@ import minimax as minimax
 import copy
 
 FRAME_RATE = 24
-MAP_SIZE = [70, 50]
+MAP_SIZE = [70, 40]
 TILE_SIZE = 24
+START_LENGTH = 5
+
 
 MAX_DEPTH = 3
 
@@ -338,7 +340,7 @@ class Player:
     left = False
     right = False
     direction = None
-    length = 2
+    length = START_LENGTH
     tail = []
 
     def turn(self):
@@ -366,13 +368,20 @@ p1 = Player()
 p1.x = 4
 p1.y = TILES_Y / 2 + 5
 p1.direction = UP
-p1.tail = [(p1.x, p1.y - 1), (p1.x, p1.y - 2)]
+# p1.tail = [(p1.x, p1.y - 1), (p1.x, p1.y - 2)]
+p1.tail = []
+for i in range(1, p1.length + 1):
+    p1.tail.append((p1.x, p1.y - i))
 
 p2 = Player()
 p2.x = TILES_X - 5
 p2.y = TILES_Y / 2 + 5
 p2.direction = UP
-p2.tail = [(p2.x, p2.y - 1), (p2.x, p2.y - 2)]
+# p2.tail = [(p2.x, p2.y - 1), (p2.x, p2.y - 2)]
+p2.tail = []
+for i in range(1, p2.length + 1):
+    p2.tail.append((p2.x, p2.y - i))
+
 
 # main loop
 while winner == None:
