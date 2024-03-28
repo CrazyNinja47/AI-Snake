@@ -31,9 +31,9 @@ def heuristic(game_state, player):
     if player_distance > 0:
         aggro_score += 1 / player_distance
         if player == 2:
-            aggro_score *= player2.length * 10
+            aggro_score *= (player2.length - player1.length) * 10
         else:
-            aggro_score *= player1.length * 10
+            aggro_score *= (player1.length - player2.length) * 10
         # If there is no food on the map, act much more aggressively - otherwise it will just go in circles
         if (food_x is None) or (food_y is None):
             aggro_score *= 10
