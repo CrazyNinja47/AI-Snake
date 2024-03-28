@@ -7,13 +7,13 @@ from pygame.locals import *
 import minimax as minimax
 import copy
 
-FRAME_RATE = 12
+FRAME_RATE = 24
 MAP_SIZE = [70, 50]
-TILE_SIZE = 12
+TILE_SIZE = 24
 
 MAX_DEPTH = 3
 
-using_minimax_1 = False
+using_minimax_1 = True
 using_minimax_2 = True
 
 
@@ -40,8 +40,7 @@ class GameState:
 
         for opp_direction in directions:
             for self_direction in directions:
-                new_state = self.next_state(
-                    self_direction, opp_direction, player)
+                new_state = self.next_state(self_direction, opp_direction, player)
                 children_with_moves.append((new_state, self_direction))
 
         return children_with_moves
@@ -283,8 +282,7 @@ def get_dimension(x, y, width=0, height=0):
 pygame.init()
 pygame.display.set_caption("Snake Battle by Scriptim")
 CLOCK = pygame.time.Clock()
-DISPLAY_SURFACE = pygame.display.set_mode(
-    (TILE_SIZE * TILES_X, TILE_SIZE * TILES_Y))
+DISPLAY_SURFACE = pygame.display.set_mode((TILE_SIZE * TILES_X, TILE_SIZE * TILES_Y))
 DISPLAY_SURFACE.fill(COLOR_BG)
 
 # fonts (change font files here)
@@ -307,8 +305,7 @@ def game_over_msg(winner):
         if p1.length == p2.length:
             draw = FONT_SC.render("Draw!", 1, COLOR_FG)
             DISPLAY_SURFACE.blit(
-                draw, (DISPLAY_SURFACE.get_width() / 2 -
-                       draw.get_rect().width / 2, 200)
+                draw, (DISPLAY_SURFACE.get_width() / 2 - draw.get_rect().width / 2, 200)
             )
         elif p1.length > p2.length:
             game_over_msg(1)
@@ -437,10 +434,8 @@ while winner == None:
     DISPLAY_SURFACE.fill(COLOR_BG)
 
     # draw head
-    pygame.draw.rect(DISPLAY_SURFACE, COLOR_P1,
-                     get_dimension(p1.x, p1.y, 1, 1))
-    pygame.draw.rect(DISPLAY_SURFACE, COLOR_P2,
-                     get_dimension(p2.x, p2.y, 1, 1))
+    pygame.draw.rect(DISPLAY_SURFACE, COLOR_P1, get_dimension(p1.x, p1.y, 1, 1))
+    pygame.draw.rect(DISPLAY_SURFACE, COLOR_P2, get_dimension(p2.x, p2.y, 1, 1))
 
     # move head
     p1.x += p1.direction[0]
@@ -450,11 +445,9 @@ while winner == None:
 
     # draw tail
     for i in p1.tail:
-        pygame.draw.rect(DISPLAY_SURFACE, COLOR_P1,
-                         get_dimension(i[0], i[1], 1, 1))
+        pygame.draw.rect(DISPLAY_SURFACE, COLOR_P1, get_dimension(i[0], i[1], 1, 1))
     for i in p2.tail:
-        pygame.draw.rect(DISPLAY_SURFACE, COLOR_P2,
-                         get_dimension(i[0], i[1], 1, 1))
+        pygame.draw.rect(DISPLAY_SURFACE, COLOR_P2, get_dimension(i[0], i[1], 1, 1))
 
     # move tail
     for i in range(p1.length - 1, -1, -1):
@@ -470,8 +463,7 @@ while winner == None:
 
     # food
     if food_drawn:
-        pygame.draw.rect(DISPLAY_SURFACE, COLOR_FD,
-                         get_dimension(food_x, food_y, 1, 1))
+        pygame.draw.rect(DISPLAY_SURFACE, COLOR_FD, get_dimension(food_x, food_y, 1, 1))
         if p1.x == food_x and p1.y == food_y:
             p1.tail.insert(0, (p1.x + p1.direction[0], p1.y + p1.direction[1]))
             p1.x = food_x + p1.direction[0]
@@ -503,8 +495,7 @@ while winner == None:
             20,
         ),
     )
-    DISPLAY_SURFACE.blit(
-        sep_length_label, (DISPLAY_SURFACE.get_width() / 2, 20))
+    DISPLAY_SURFACE.blit(sep_length_label, (DISPLAY_SURFACE.get_width() / 2, 20))
     DISPLAY_SURFACE.blit(
         p2_length_label,
         (
@@ -585,15 +576,13 @@ while winner == None:
             (340, DISPLAY_SURFACE.get_height() - 80),
         )
         DISPLAY_SURFACE.blit(
-            FONT_DB.render(
-                "FPS: " + str(round(CLOCK.get_fps(), 2)), 1, COLOR_DB),
+            FONT_DB.render("FPS: " + str(round(CLOCK.get_fps(), 2)), 1, COLOR_DB),
             (340, DISPLAY_SURFACE.get_height() - 60),
         )
         if food_drawn:
             DISPLAY_SURFACE.blit(
                 FONT_DB.render(
-                    "Food: (" + str(food_x) + ", " +
-                    str(food_y) + ")", 1, COLOR_DB
+                    "Food: (" + str(food_x) + ", " + str(food_y) + ")", 1, COLOR_DB
                 ),
                 (340, DISPLAY_SURFACE.get_height() - 40),
             )
