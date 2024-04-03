@@ -1,12 +1,14 @@
 # Main issue with minimax is we need to get future states, to be added to GameState
 import copy as copy
+import random as random
 LENGTH_WEIGHT = 50
-AGGRO_WEIGHT = 5
-FOOD_DIST_WEIGHT = 25
+AGGRO_WEIGHT = 10
+FOOD_DIST_WEIGHT = 20
+EATING_WEIGHT = 40
 WIN_WEIGHT = 1000
 LOSE_WEIGHT = 1000
 DRAW_WEIGHT = 500
-EDGE_WEIGHT = 1
+EDGE_WEIGHT = 5
 
 debug = False
 
@@ -14,7 +16,7 @@ debug = False
 
 def heuristic(game_state, player):
  
-    test = {'length':0, 'aggro':0, 'food':0, 'win':0, 'edge':0}
+    test = {'length':0, 'aggro':0, 'food':0, 'win':0, 'edge':0, 'eaten':0}
 
     player1 = game_state.player1
     player2 = game_state.player2
@@ -66,9 +68,32 @@ def heuristic(game_state, player):
         dis_score = food_distance * FOOD_DIST_WEIGHT
     else:
         dis_score = 0
+
     test.update(({'food':-(dis_score)}))
     score -= dis_score
-    
+
+    # Reward for eating, not spinning around food!
+    eaten_score = 0
+    if player == 2:
+        if player2.just_ate:
+            test.update(({'eaten':EATING_WEIGHT}))
+            eaten_score = EATING_WEIGHT
+        if player1.just_ate:
+            test.update(({'eaten':-EATING_WEIGHT}))
+            eaten_score = -EATING_WEIGHT
+
+    else:
+        if player1.just_ate:
+            test.update(({'eaten':EATING_WEIGHT}))
+            eaten_score = EATING_WEIGHT
+        if player2.just_ate:
+            test.update(({'eaten':-EATING_WEIGHT}))
+            eaten_score = -EATING_WEIGHT
+
+    score += eaten_score
+
+
+
 
     # Reward for winning or losing
     if player == 2:
@@ -100,18 +125,18 @@ def heuristic(game_state, player):
         enemyID = player1
 
 
-    if playerID.x < 1 or playerID.x >= (game_state.MAP_SIZE[0] - 1 ):
-        score -= EDGE_WEIGHT
-        test.update(({'edge':-(DRAW_WEIGHT)}))
-    if playerID.y < 1 or playerID.y >= (game_state.MAP_SIZE[1] - 1 ):
-        score -= EDGE_WEIGHT
-        test.update(({'edge':-(DRAW_WEIGHT)}))
-    if enemyID.x < 1 or enemyID.x >= (game_state.MAP_SIZE[0] - 1 ):
-        score += EDGE_WEIGHT
-        test.update(({'edge':(DRAW_WEIGHT)}))
-    if enemyID.y < 1 or enemyID.y >= (game_state.MAP_SIZE[1] - 1 ):
-        test.update(({'edge':(DRAW_WEIGHT)}))  
-        score += EDGE_WEIGHT
+    # if playerID.x < 1 or playerID.x >= (game_state.MAP_SIZE[0] - 1 ):
+    #     score -= EDGE_WEIGHT
+    #     test.update(({'edge':-(DRAW_WEIGHT)}))
+    # if playerID.y < 1 or playerID.y >= (game_state.MAP_SIZE[1] - 1 ):
+    #     score -= EDGE_WEIGHT
+    #     test.update(({'edge':-(DRAW_WEIGHT)}))
+    # if enemyID.x < 1 or enemyID.x >= (game_state.MAP_SIZE[0] - 1 ):
+    #     score += EDGE_WEIGHT
+    #     test.update(({'edge':(DRAW_WEIGHT)}))
+    # if enemyID.y < 1 or enemyID.y >= (game_state.MAP_SIZE[1] - 1 ):
+    #     test.update(({'edge':(DRAW_WEIGHT)}))  
+    #     score += EDGE_WEIGHT
 
 
 
@@ -138,6 +163,7 @@ def minimax(game_state, depth, alpha, beta, maximizing_player, player):
             best_val = float("inf")
     best_move = None
     moves = ["LEFT","STRAIGHT","RIGHT"]
+    random.shuffle(moves)
 
     for move in moves:
 
