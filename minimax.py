@@ -2,11 +2,11 @@
 import copy as copy
 LENGTH_WEIGHT = 50
 AGGRO_WEIGHT = 5
-FOOD_DIST_WEIGHT = 20
+FOOD_DIST_WEIGHT = 25
 WIN_WEIGHT = 1000
 LOSE_WEIGHT = 1000
 DRAW_WEIGHT = 500
-EDGE_WEIGHT = 10
+EDGE_WEIGHT = 1
 
 debug = False
 
@@ -100,14 +100,19 @@ def heuristic(game_state, player):
         enemyID = player1
 
 
-    # if playerID.x < 1 or playerID.x >= (game_state.MAP_SIZE[0] - 2 ):
-    #     score -= EDGE_WEIGHT
-    # if playerID.y < 1 or playerID.y >= (game_state.MAP_SIZE[1] - 2 ):
-    #     score -= EDGE_WEIGHT
-    # if enemyID.x < 1 or enemyID.x >= (game_state.MAP_SIZE[0] - 2 ):
-    #     score += EDGE_WEIGHT
-    # if enemyID.y < 1 or enemyID.y >= (game_state.MAP_SIZE[1] - 2 ):
-    #     score += EDGE_WEIGHT
+    if playerID.x < 1 or playerID.x >= (game_state.MAP_SIZE[0] - 1 ):
+        score -= EDGE_WEIGHT
+        test.update(({'edge':-(DRAW_WEIGHT)}))
+    if playerID.y < 1 or playerID.y >= (game_state.MAP_SIZE[1] - 1 ):
+        score -= EDGE_WEIGHT
+        test.update(({'edge':-(DRAW_WEIGHT)}))
+    if enemyID.x < 1 or enemyID.x >= (game_state.MAP_SIZE[0] - 1 ):
+        score += EDGE_WEIGHT
+        test.update(({'edge':(DRAW_WEIGHT)}))
+    if enemyID.y < 1 or enemyID.y >= (game_state.MAP_SIZE[1] - 1 ):
+        test.update(({'edge':(DRAW_WEIGHT)}))  
+        score += EDGE_WEIGHT
+
 
 
 
@@ -148,7 +153,10 @@ def minimax(game_state, depth, alpha, beta, maximizing_player, player):
             target = opponent
         
         child = game_state.next_state(temp_state, move, player, target)
-        eval, _ = minimax(child, depth - 1, alpha, beta, not maximizing_player, player)
+        if child.winner == opponent or child.winner == 0:
+            eval = -(LOSE_WEIGHT)
+        else:        
+            eval, _ = minimax(child, depth - 1, alpha, beta, not maximizing_player, player)
 
         if maximizing_player:
             if debug:  print(f'{"    "*depth}(MinMax @ {depth}) MAXIMIZE START {eval}  {best_val}')
@@ -167,9 +175,9 @@ def minimax(game_state, depth, alpha, beta, maximizing_player, player):
                 best_move = move
             beta = min(beta, eval)
         if debug: print(f'{"    "*depth}Done with {move}')
-        # if beta <= alpha:
-        #     print(f'!!!PRUNED!!! {beta} <= {alpha}  ')
-        #     break
+        if beta <= alpha:
+            if debug: print(f'!!!PRUNED!!! {beta} <= {alpha}  ')
+            break
     if debug:  
         print(f'{"    "*depth}(MinMax @ {depth}) **EndMinMax Player: {target} - {best_move} at {best_val}')
     return best_val, best_move
@@ -177,8 +185,8 @@ def minimax(game_state, depth, alpha, beta, maximizing_player, player):
 def iterative_deepening(game_state, max_depth, player):
     best_move = None
     status = game_state.get_status()
-    for depth in range(1, max_depth + 1):
-        eval, move = minimax(
+    #for depth in range(1, max_depth + 1):
+    eval, move = minimax(
             game_state, max_depth, float("-inf"), float("inf"), True, player
     )
     if move:
