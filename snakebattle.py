@@ -16,7 +16,7 @@ START_LENGTH = 5
 debug = False
 
 
-MAX_DEPTH = 5
+MAX_DEPTH = 7
 
 using_minimax_1 = True
 using_minimax_2 = True
@@ -67,6 +67,9 @@ class GameState:
 
     def next_state(self, state, move, player, moving):
         if debug: print ("\t\t\t$$$ ---$$$")
+
+        state.player1.just_ate = False
+        state.player2.just_ate = False
 
         # We need to return game state after a movement step.
         # Probably can copy logic from below, perform a predicted step, and return the state.
@@ -123,6 +126,7 @@ class GameState:
 
         if moving_player.x == state.food[0] and moving_player.y == state.food[1]:
             moving_player.tail.append(moving_player.last_Tail)
+            moving_player.just_ate = True
             # moving_player.tail.insert(
             #     0,
             #     (
@@ -413,6 +417,7 @@ p1.tail = []
 for i in range(1, p1.length + 1):
     p1.tail.append((p1.x, p1.y - i))
 p1.last_Tail = None
+p1.just_ate = False
 
 p2 = Player()
 p2.x = TILES_X - 5
@@ -423,11 +428,14 @@ p2.tail = []
 for i in range(1, p2.length + 1):
     p2.tail.append((p2.x, p2.y - i))
 p2.last_Tail = None
+p2.just_ate = False
 
 
 # main loop
 while winner == None:
     gs.update(player1=p1, player2=p2, food=(food_x, food_y), winner=winner)
+    p1.just_ate = False
+    p2.just_ate = False
     # event queue
     for event in pygame.event.get():
         # QUIT event
@@ -481,6 +489,7 @@ while winner == None:
     p2.left = False
     p2.right = False
 
+
     # clear
     DISPLAY_SURFACE.fill(COLOR_BG)
 
@@ -525,6 +534,7 @@ while winner == None:
         pygame.draw.rect(DISPLAY_SURFACE, COLOR_FD, get_dimension(food_x, food_y, 1, 1))
         if p1.x == food_x and p1.y == food_y:
             p1.tail.append(p1.last_Tail)
+            p1.just_ate = True
             #p1.tail.insert(0, (p1.x + p1.direction[0], p1.y + p1.direction[1]))
             # p1.x = food_x + p1.direction[0]
             # p1.y = food_y + p1.direction[1]
@@ -532,6 +542,7 @@ while winner == None:
             food_drawn = False
         elif p2.x == food_x and p2.y == food_y:
             p2.tail.append(p2.last_Tail)
+            p2.just_ate = True
             #p2.tail.insert(0, (p2.x + p2.direction[0], p2.y + p2.direction[1]))
             # p2.x = food_x + p2.direction[0]
             # p2.y = food_y + p2.direction[1]
