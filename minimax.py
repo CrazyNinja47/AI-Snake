@@ -153,8 +153,12 @@ def minimax(game_state, depth, alpha, beta, maximizing_player, player):
             target = opponent
         
         child = game_state.next_state(temp_state, move, player, target)
-        if child.winner == opponent or child.winner == 0:
+        if child.winner == opponent:
             eval = -(LOSE_WEIGHT)
+        elif child.winner == 0:
+            eval = -(DRAW_WEIGHT)
+        elif child.winner == player:
+            eval = (WIN_WEIGHT)
         else:        
             eval, _ = minimax(child, depth - 1, alpha, beta, not maximizing_player, player)
 
