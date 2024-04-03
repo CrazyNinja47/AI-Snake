@@ -8,15 +8,15 @@ import minimax as minimax
 import copy
 import stateUtils as stateUtils
 
-FRAME_RATE = 15
-MAP_SIZE = [20  , 20]
+FRAME_RATE = 20
+MAP_SIZE = [30  , 30]
 TILE_SIZE = 10
 START_LENGTH = 5
 
 debug = False
 
 
-MAX_DEPTH = 2
+MAX_DEPTH = 5
 
 using_minimax_1 = True
 using_minimax_2 = True
