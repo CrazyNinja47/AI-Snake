@@ -1,5 +1,4 @@
 # Main issue with minimax is we need to get future states, to be added to GameState
-import stateUtils as stateUtils
 import copy as copy
 LENGTH_WEIGHT = 50
 AGGRO_WEIGHT = 5
