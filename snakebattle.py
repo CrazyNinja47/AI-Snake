@@ -6,29 +6,43 @@ import random
 from pygame.locals import *
 import minimax as minimax
 import copy
+import stateUtils as stateUtils
 
-FRAME_RATE = 24
-MAP_SIZE = [70, 40]
-TILE_SIZE = 24
+FRAME_RATE = 20
+MAP_SIZE = [30  , 30]
+TILE_SIZE = 10
 START_LENGTH = 5
 
+debug = False
 
-MAX_DEPTH = 3
+
+MAX_DEPTH = 7
 
 using_minimax_1 = True
 using_minimax_2 = True
 
 
+
 # Stores the GameState for use in AI.
 # Needs to be able to determine future states for minimax.
 class GameState:
-
+    MAP_SIZE = MAP_SIZE
     def __init__(self, player1=None, player2=None, food=None, winner=None):
         self.player1 = copy.deepcopy(player1)
         self.player2 = copy.deepcopy(player2)
-        self.food = food
-        self.winner = winner
+        self.food = copy.deepcopy(food)
+        self.winner = copy.deepcopy(winner)
         self.initialized = True
+
+
+    # def reset():
+    #     self.Player1 = copy.deepcopy(self.saved_Player1)
+    #     self.saved_Player2 = copy.deepcopy(self.saved_Player2)
+    #     self.saved_Food = copy.deepcopy(self.saved_Food)
+    #     self.winner = copy.deepcopy(self.saved_Winner)
+
+
+
 
     def update(self, player1, player2, food, winner):
         self.player1 = copy.deepcopy(player1)
@@ -36,16 +50,14 @@ class GameState:
         self.food = food
         self.winner = winner
 
-    def get_children(self, player):
-        directions = ["STRAIGHT", "LEFT", "RIGHT"]
-        children_with_moves = []
+    def get_status(self):
+        return GameState(
+            copy.deepcopy(self.player1),
+            copy.deepcopy(self.player2),
+            copy.deepcopy(self.food),
+            copy.deepcopy(self.winner)
+        )
 
-        for opp_direction in directions:
-            for self_direction in directions:
-                new_state = self.next_state(self_direction, opp_direction, player)
-                children_with_moves.append((new_state, self_direction))
-
-        return children_with_moves
 
     def is_terminal(self):
         return self.winner != None
@@ -53,157 +65,175 @@ class GameState:
     def to_string(self):
         return f"Player1: [{self.player1.x}, {self.player1.y}] | Player2: [{self.player2.x}, {self.player2.y}] | Food: [{self.food[0]}, {self.food[1]}] | Winner: {self.winner}"
 
-    def next_state(self, self_direction, opp_direction, player):
+    def next_state(self, state, move, player, moving):
+        if debug: print ("\t\t\t$$$ ---$$$")
+
+        state.player1.just_ate = False
+        state.player2.just_ate = False
+
         # We need to return game state after a movement step.
         # Probably can copy logic from below, perform a predicted step, and return the state.
+        if moving == 1:
+            moving_player = state.player1
+        else:
+            moving_player = state.player2
 
         if player == 1:
-            temp = opp_direction
-            opp_direction = self_direction
-            self_direction = temp
+            target_player = state.player1
+            target_win = 1
+            opponent = state.player2
+            opponent_win = 2
+        else:
+            target_player = state.player2
+            target_win = 2
+            opponent = state.player1
+            opponent_win = 1
+        #     temp = opp_direction
+        #     opp_direction = self_direction
+        #     self_direction = temp
 
-        new_gs = GameState(
-            copy.deepcopy(self.player1),
-            copy.deepcopy(self.player2),
-            self.food,
-            self.winner,
-        )
-        if self_direction == "LEFT":
-            new_gs.player2.left = True
-            new_gs.player2.right = False
-            new_gs.player2.turn()
-        elif self_direction == "RIGHT":
-            new_gs.player2.left = False
-            new_gs.player2.right = True
-            new_gs.player2.turn()
+        if debug:  print(f'\t\t(Next State)Scoring for {player}, but moving Player {moving} @ ({moving_player.x},{moving_player.y}) and facing {moving_player.direction} is considering {move}')
 
-        if opp_direction == "LEFT":
-            new_gs.player1.left = True
-            new_gs.player1.right = False
-            new_gs.player1.turn()
-        elif opp_direction == "RIGHT":
-            new_gs.player1.left = False
-            new_gs.player1.right = True
-            new_gs.player1.turn()
+        if move == "LEFT":
+            moving_player.left = True
+            moving_player.right = False
+            moving_player.turn()
+        elif move == "RIGHT":
+            moving_player.left = False
+            moving_player.right = True
+            moving_player.turn()
 
-        new_gs.player1.left = False
-        new_gs.player1.right = False
-        new_gs.player2.left = False
-        new_gs.player2.right = False
+        moving_player.left = False
+        moving_player.right = False
 
-        new_gs.player1.x += new_gs.player1.direction[0]
-        new_gs.player1.y += new_gs.player1.direction[1]
-        new_gs.player2.x += new_gs.player2.direction[0]
-        new_gs.player2.y += new_gs.player2.direction[1]
+        moving_player.x += moving_player.direction[0]
+        moving_player.y += moving_player.direction[1]
 
-        for i in range(new_gs.player1.length - 1, -1, -1):
+        if debug:  print(f'\t\t(Next State) PLAYER {moving} NOW AT SPOT: ({moving_player.x},{moving_player.y})')
+
+        new_gs = state
+        new_gs.winner = None
+
+        moving_player.last_Tail = (moving_player.tail[moving_player.length -1 ][0],(moving_player.tail[moving_player.length -1][1]))
+        for i in range(moving_player.length - 1, -1, -1):
             if i == 0:
-                new_gs.player1.tail[i] = (new_gs.player1.x, new_gs.player1.y)
+                moving_player.tail[i] = (moving_player.x, moving_player.y)
             else:
-                new_gs.player1.tail[i] = (
-                    new_gs.player1.tail[i - 1][0],
-                    new_gs.player1.tail[i - 1][1],
-                )
-        for i in range(new_gs.player2.length - 1, -1, -1):
-            if i == 0:
-                new_gs.player2.tail[i] = (new_gs.player2.x, new_gs.player2.y)
-            else:
-                new_gs.player2.tail[i] = (
-                    new_gs.player2.tail[i - 1][0],
-                    new_gs.player2.tail[i - 1][1],
+                moving_player.tail[i] = (
+                    moving_player.tail[i - 1][0],
+                    moving_player.tail[i - 1][1],
                 )
 
-        if new_gs.player1.x == new_gs.food[0] and new_gs.player1.y == new_gs.food[1]:
-            new_gs.player1.tail.insert(
-                0,
-                (
-                    new_gs.player1.x + new_gs.player1.direction[0],
-                    new_gs.player1.y + new_gs.player1.direction[1],
-                ),
-            )
-            new_gs.player1.x = new_gs.food[0] + new_gs.player1.direction[0]
-            new_gs.player1.y = new_gs.food[1] + new_gs.player1.direction[1]
-            new_gs.player1.length += 1
-
-        elif new_gs.player2.x == new_gs.food[0] and new_gs.player2.y == new_gs.food[1]:
-            new_gs.player2.tail.insert(
-                0,
-                (
-                    new_gs.player2.x + new_gs.player2.direction[0],
-                    new_gs.player2.y + new_gs.player2.direction[1],
-                ),
-            )
-            new_gs.player2.x = new_gs.food[0] + new_gs.player2.direction[0]
-            new_gs.player2.y = new_gs.food[1] + new_gs.player2.direction[1]
-            new_gs.player2.length += 1
+        if moving_player.x == state.food[0] and moving_player.y == state.food[1]:
+            moving_player.tail.append(moving_player.last_Tail)
+            moving_player.just_ate = True
+            # moving_player.tail.insert(
+            #     0,
+            #     (
+            #         moving_player.x + moving_player.direction[0],
+            #         moving_player.y + moving_player.direction[1],
+            #     ),
+            # )
+            # moving_player.x = state.food[0] + moving_player.direction[0]
+            # moving_player.y = state.food[1] + moving_player.direction[1]
+            moving_player.length += 1
 
         if (
-            new_gs.player1.x >= TILES_X
-            or new_gs.player1.y >= TILES_Y
-            or new_gs.player1.x < 0
-            or new_gs.player1.y < 0
+            target_player.x >= TILES_X
+            or target_player.y >= TILES_Y
+            or target_player.x < 0
+            or target_player.y < 0
         ) and (
-            new_gs.player2.x >= TILES_X
-            or new_gs.player2.y >= TILES_Y
-            or new_gs.player2.x < 0
-            or new_gs.player2.y < 0
+            opponent.x >= TILES_X
+            or opponent.y >= TILES_Y
+            or opponent.x < 0
+            or opponent.y < 0
         ):
+            if debug:  print(f'\t\tPlayer {target_win} says: We both ran off the borders')
             new_gs.winner = 0
         else:
             if (
-                new_gs.player1.x >= TILES_X
-                or new_gs.player1.y >= TILES_Y
-                or new_gs.player1.x < 0
-                or new_gs.player1.y < 0
+                target_player.x >= TILES_X
+                or target_player.y >= TILES_Y
+                or target_player.x < 0
+                or target_player.y < 0
             ):
                 if new_gs.winner == None:
-                    new_gs.winner = 2
+                    if debug:  print(f'\t\tPlayer {target_win} says:  I ran off the board')
+                    new_gs.winner = opponent_win
                 else:
+                    if debug:  print(f'\t\tPlayer {target_win} says: I ran off board but they died somehow')
                     new_gs.winner = 0
             elif (
-                new_gs.player2.x >= TILES_X
-                or new_gs.player2.y >= TILES_Y
-                or new_gs.player2.x < 0
-                or new_gs.player2.y < 0
+                opponent.x >= TILES_X
+                or opponent.y >= TILES_Y
+                or opponent.x < 0
+                or opponent.y < 0
             ):
                 if new_gs.winner == None:
-                    new_gs.winner = 1
+                    if debug:  print(f'\t\tPlayer {target_win} says: They ran off board, I win')
+                    new_gs.winner = target_win
                 else:
+                    if debug:  print(f'\t\tPlayer {target_win} says: They ran off board, but I died somehow?')
                     new_gs.winner = 0
 
         # check game over (touch)
-        if (
-            new_gs.player1.x == new_gs.player2.x
-            and new_gs.player1.y == new_gs.player2.y
-        ):
+        if (target_player.x == opponent.x and target_player.y == opponent.y and new_gs.winner is None):
+            if debug:  print(f'\t\tPlayer {target_win} says: Kamikaze Attack, we will tie')
             new_gs.winner = 0
         else:
-            for index, i in enumerate(new_gs.player1.tail):
-                if i[0] == new_gs.player2.x and i[1] == new_gs.player2.y:
-                    if new_gs.winner == None:
-                        new_gs.winner = 1
-                    else:
-                        new_gs.winner = 0
-                if index > 0:
-                    if i[0] == new_gs.player1.x and i[1] == new_gs.player1.y:
+            # Check our tail
+            # We killed them with our tail
+            if new_gs.winner is None:
+                for index, i in enumerate(target_player.tail):
+                    #if debug: print(f'Checking P1: #{index} - ({i[0]},{i[1]})')
+                    if i[0] == opponent.x and i[1] == opponent.y:
                         if new_gs.winner == None:
-                            new_gs.winner = 2
+                            if debug:  print(f'\t\tPlayer {target_win} says: We killed player {opponent_win} with our tail using {move}')
+                            new_gs.winner = target_win
+                            break
                         else:
                             new_gs.winner = 0
-            for index, i in enumerate(new_gs.player2.tail):
-                if i[0] == new_gs.player1.x and i[1] == new_gs.player1.y:
-                    if new_gs.winner == None:
-                        new_gs.winner = 2
-                    else:
-                        new_gs.winner = 0
-                if index > 0:
-                    if i[0] == new_gs.player2.x and i[1] == new_gs.player2.y:
+                            break   
+            # We ate our own tail:
+                    #if debug: print(f'Comparing P1 head ({target_player.x},{target_player.y}) to its tail: #{index} - ({i[0]},{i[1]})')
+                    if index != 0 and i[0] == target_player.x and i[1] == target_player.y:
                         if new_gs.winner == None:
-                            new_gs.winner = 1
+                            if debug:  print(f'\t\tPlayer {target_win} says: We ate our own tail with {move}')
+                            new_gs.winner = opponent_win
+                            break
                         else:
+                            if debug:  print(f'\t\tPlayer {target_win} says: We ate our own tail with {move}, but they died somehow')
                             new_gs.winner = 0
-
-        # print(new_gs.to_string())
+                            break
+            # Check Opponent Tail
+            # They killed us with their tail
+            if new_gs.winner is None:
+                for index, i in enumerate(opponent.tail):
+                    if i[0] == target_player.x and i[1] == target_player.y:
+                        if new_gs.winner == None:
+                            if debug:  print(f'\t\tPlayer {target_win} says: We were killed by their tail with {move}')
+                            new_gs.winner = opponent_win
+                            break
+                        else:
+                            if debug:  print(f'\t\tPlayer {target_win} says: We were killed by their tail with {move} but they died somehow')                            
+                            new_gs.winner = 0
+                            break
+                        if index != 0 and i[0] == opponent.x and i[1] == opponent.y:
+                            if new_gs.winner == None:
+                                if debug:  print(f'\t\tPlayer {target_win} says: They ate their own tail when we went {move}')
+                                new_gs.winner = target_win
+                                break
+                            else:
+                                new_gs.winner = 0
+                                break
+        if new_gs.winner == 0:
+            if debug: print(f'\t\tPlayer {target_win} says: I forsee a draw')
+        elif new_gs.winner != target_win and new_gs.winner is not None:
+            if debug: print(f'\t\tPlayer {target_win} says: I will lose! {new_gs.winner} will win')
+        elif new_gs.winner != opponent_win and new_gs.winner is not None:
+            if debug: print(f'\t\tPlayer {target_win} says: I will win')
+        if debug: print ("\t\t\t$$$ ---  $$$")
         return new_gs
 
 
@@ -305,12 +335,14 @@ FONT_SC = pygame.font.Font(None, TILE_SIZE * 5)  # score
 
 # directions
 UP = (0, -1)
-RIGHT = (-1, 0)
+RIGHT = (1, 0)
 DOWN = (0, 1)
-LEFT = (1, 0)
+LEFT = (-1, 0)
 
 # game over
 winner = None
+
+
 
 
 # print game over message
@@ -358,46 +390,52 @@ class Player:
     def turn(self):
         if self.right:
             if self.direction == UP:
-                self.direction = LEFT
-            elif self.direction == RIGHT:
-                self.direction = UP
-            elif self.direction == DOWN:
                 self.direction = RIGHT
-            elif self.direction == LEFT:
+            elif self.direction == RIGHT:
                 self.direction = DOWN
+            elif self.direction == DOWN:
+                self.direction = LEFT
+            elif self.direction == LEFT:
+                self.direction = UP
         elif self.left:
             if self.direction == UP:
-                self.direction = RIGHT
-            elif self.direction == RIGHT:
-                self.direction = DOWN
-            elif self.direction == DOWN:
                 self.direction = LEFT
-            elif self.direction == LEFT:
+            elif self.direction == RIGHT:
                 self.direction = UP
+            elif self.direction == DOWN:
+                self.direction = RIGHT
+            elif self.direction == LEFT:
+                self.direction = DOWN
 
 
 p1 = Player()
 p1.x = 4
-p1.y = TILES_Y / 2 + 5
-p1.direction = UP
+p1.y = 10
+p1.direction = DOWN
 # p1.tail = [(p1.x, p1.y - 1), (p1.x, p1.y - 2)]
 p1.tail = []
 for i in range(1, p1.length + 1):
     p1.tail.append((p1.x, p1.y - i))
+p1.last_Tail = None
+p1.just_ate = False
 
 p2 = Player()
 p2.x = TILES_X - 5
-p2.y = TILES_Y / 2 + 5
-p2.direction = UP
+p2.y = 10
+p2.direction = DOWN
 # p2.tail = [(p2.x, p2.y - 1), (p2.x, p2.y - 2)]
 p2.tail = []
 for i in range(1, p2.length + 1):
     p2.tail.append((p2.x, p2.y - i))
+p2.last_Tail = None
+p2.just_ate = False
 
 
 # main loop
 while winner == None:
     gs.update(player1=p1, player2=p2, food=(food_x, food_y), winner=winner)
+    p1.just_ate = False
+    p2.just_ate = False
     # event queue
     for event in pygame.event.get():
         # QUIT event
@@ -451,8 +489,10 @@ while winner == None:
     p2.left = False
     p2.right = False
 
+
     # clear
     DISPLAY_SURFACE.fill(COLOR_BG)
+
 
     # draw head
     pygame.draw.rect(DISPLAY_SURFACE, COLOR_P1, get_dimension(p1.x, p1.y, 1, 1))
@@ -464,37 +504,48 @@ while winner == None:
     p2.x += p2.direction[0]
     p2.y += p2.direction[1]
 
-    # draw tail
-    for i in p1.tail:
-        pygame.draw.rect(DISPLAY_SURFACE, COLOR_P1, get_dimension(i[0], i[1], 1, 1))
-    for i in p2.tail:
-        pygame.draw.rect(DISPLAY_SURFACE, COLOR_P2, get_dimension(i[0], i[1], 1, 1))
 
     # move tail
+    p1.last_Tail = (p1.tail[p1.length -1 ][0],(p1.tail[p1.length -1][1]))
     for i in range(p1.length - 1, -1, -1):
         if i == 0:
             p1.tail[i] = (p1.x, p1.y)
         else:
             p1.tail[i] = (p1.tail[i - 1][0], p1.tail[i - 1][1])
+
+    p2.last_Tail = (p2.tail[p2.length -1][0],(p2.tail[p2.length -1][1]))
     for i in range(p2.length - 1, -1, -1):
         if i == 0:
             p2.tail[i] = (p2.x, p2.y)
         else:
             p2.tail[i] = (p2.tail[i - 1][0], p2.tail[i - 1][1])
 
+
+    # draw tail
+    for i in p1.tail:
+        pygame.draw.rect(DISPLAY_SURFACE, COLOR_P1, get_dimension(i[0], i[1], 1, 1))
+    for i in p2.tail:
+        pygame.draw.rect(DISPLAY_SURFACE, COLOR_P2, get_dimension(i[0], i[1], 1, 1))
+
+
+
     # food
     if food_drawn:
         pygame.draw.rect(DISPLAY_SURFACE, COLOR_FD, get_dimension(food_x, food_y, 1, 1))
         if p1.x == food_x and p1.y == food_y:
-            p1.tail.insert(0, (p1.x + p1.direction[0], p1.y + p1.direction[1]))
-            p1.x = food_x + p1.direction[0]
-            p1.y = food_y + p1.direction[1]
+            p1.tail.append(p1.last_Tail)
+            p1.just_ate = True
+            #p1.tail.insert(0, (p1.x + p1.direction[0], p1.y + p1.direction[1]))
+            # p1.x = food_x + p1.direction[0]
+            # p1.y = food_y + p1.direction[1]
             p1.length += 1
             food_drawn = False
         elif p2.x == food_x and p2.y == food_y:
-            p2.tail.insert(0, (p2.x + p2.direction[0], p2.y + p2.direction[1]))
-            p2.x = food_x + p2.direction[0]
-            p2.y = food_y + p2.direction[1]
+            p2.tail.append(p2.last_Tail)
+            p2.just_ate = True
+            #p2.tail.insert(0, (p2.x + p2.direction[0], p2.y + p2.direction[1]))
+            # p2.x = food_x + p2.direction[0]
+            # p2.y = food_y + p2.direction[1]
             p2.length += 1
             food_drawn = False
     else:
@@ -531,48 +582,68 @@ while winner == None:
     if (p1.x >= TILES_X or p1.y >= TILES_Y or p1.x < 0 or p1.y < 0) and (
         p2.x >= TILES_X or p2.y >= TILES_Y or p2.x < 0 or p2.y < 0
     ):
+        if debug: print(f'Tie:  Both off screen')
         winner = 0
     else:
         if p1.x >= TILES_X or p1.y >= TILES_Y or p1.x < 0 or p1.y < 0:
             if winner == None:
+                if debug: print(f'#2 wins:  1 went off screen')
                 winner = 2
             else:
+                if debug: print(f'Tie:  1 off screen, 2 died...somehow?')
                 winner = 0
         elif p2.x >= TILES_X or p2.y >= TILES_Y or p2.x < 0 or p2.y < 0:
             if winner == None:
+                if debug: print(f'1 Wins:  2 went off screen')
                 winner = 1
             else:
+                if debug: print(f'Tie:  2 Off screen, 1 died....somehow?')
                 winner = 0
 
     # check game over (touch)
     if p1.x == p2.x and p1.y == p2.y:
+        if debug: print(f'Tie:  Head on collision')
         winner = 0
     else:
         for index, i in enumerate(p1.tail):
             if i[0] == p2.x and i[1] == p2.y:
                 if winner == None:
+                    if debug: print(f'1 Wins:  2 ate P1 tail')
                     winner = 1
+                    break
                 else:
+                    if debug: print(f'Tie:  2 ate P1 tail....1 died...somehow?')
                     winner = 0
-            if index > 0:
+                    break
+            if index != 0 and i[0] == p1.x and i[1] == p1.y:
+                if winner == None:
+                    if debug: print(f'2 Wins:  1 ate own tail')
+                    winner = 2
+                    break
+                else:
+                    if debug: print(f'Tie:  1 ate own tail, but 2 died somehow?')
+                    winner = 0
+                    break
+        if winner is None:
+            for index, i in enumerate(p2.tail):
                 if i[0] == p1.x and i[1] == p1.y:
                     if winner == None:
+                        if debug: print(f'2 Wins:  1 ate P2 tail')
                         winner = 2
+                        break
                     else:
                         winner = 0
-
-        for index, i in enumerate(p2.tail):
-            if i[0] == p1.x and i[1] == p1.y:
-                if winner == None:
-                    winner = 2
-                else:
-                    winner = 0
-            if index > 0:
-                if i[0] == p2.x and i[1] == p2.y:
+                        break
+                if index != 0 and i[0] == p2.x and i[1] == p2.y:
                     if winner == None:
                         winner = 1
+                        break
+                    else:
+                        winner = 0
+                        break
 
     if winner != None:
+        print(f'Player {winner} won!')
         game_over_msg(winner)
 
     # debugging
@@ -627,6 +698,6 @@ while winner == None:
     # update
     CLOCK.tick(TPS)
     pygame.display.update()
-
+    if debug:  print("############## TURN END  ########################")
 
 pygame.time.wait(4000)
