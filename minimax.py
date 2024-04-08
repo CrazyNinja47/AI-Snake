@@ -1,6 +1,7 @@
 # Main issue with minimax is we need to get future states, to be added to GameState
 import copy as copy
 import random as random
+import logger 
 LENGTH_WEIGHT = 50
 AGGRO_WEIGHT = 10
 FOOD_DIST_WEIGHT = 20
@@ -8,13 +9,13 @@ EATING_WEIGHT = 40
 WIN_WEIGHT = 1000
 LOSE_WEIGHT = 1000
 DRAW_WEIGHT = 500
-EDGE_WEIGHT = 5
+EDGE_WEIGHT = 3
 
 debug = False
 
 
 
-def heuristic(game_state, player):
+def heuristic(game_state, player, node):
  
     test = {'length':0, 'aggro':0, 'food':0, 'win':0, 'edge':0, 'eaten':0}
 
@@ -124,31 +125,31 @@ def heuristic(game_state, player):
         playerID = player2
         enemyID = player1
 
-
-    # if playerID.x < 1 or playerID.x >= (game_state.MAP_SIZE[0] - 1 ):
-    #     score -= EDGE_WEIGHT
-    #     test.update(({'edge':-(DRAW_WEIGHT)}))
-    # if playerID.y < 1 or playerID.y >= (game_state.MAP_SIZE[1] - 1 ):
-    #     score -= EDGE_WEIGHT
-    #     test.update(({'edge':-(DRAW_WEIGHT)}))
-    # if enemyID.x < 1 or enemyID.x >= (game_state.MAP_SIZE[0] - 1 ):
-    #     score += EDGE_WEIGHT
-    #     test.update(({'edge':(DRAW_WEIGHT)}))
-    # if enemyID.y < 1 or enemyID.y >= (game_state.MAP_SIZE[1] - 1 ):
-    #     test.update(({'edge':(DRAW_WEIGHT)}))  
-    #     score += EDGE_WEIGHT
+    if playerID.x < 2 or playerID.x >= (game_state.MAP_SIZE[0] - 2 ):
+        score -= EDGE_WEIGHT
+        test.update(({'edge':-(DRAW_WEIGHT)}))
+    if playerID.y < 2 or playerID.y >= (game_state.MAP_SIZE[1] - 2 ):
+        score -= EDGE_WEIGHT
+        test.update(({'edge':-(DRAW_WEIGHT)}))
+    if enemyID.x < 2 or enemyID.x >= (game_state.MAP_SIZE[0] - 2 ):
+        score += EDGE_WEIGHT
+        test.update(({'edge':(DRAW_WEIGHT)}))
+    if enemyID.y < 2 or enemyID.y >= (game_state.MAP_SIZE[1] - 2 ):
+        test.update(({'edge':(DRAW_WEIGHT)}))  
+        score += EDGE_WEIGHT
 
 
 
 
 
     if debug: print(f'#**# (Heuristic) Player {player} @ ({playerID.x},{playerID.y}) with {test} and total: {round(sum(test.values()),4)} #**#')
+    node.heuristic = test
     return score
 
 
-def minimax(game_state, depth, alpha, beta, maximizing_player, player):
+def minimax(game_state, depth, alpha, beta, maximizing_player, player, node, logging):
     if depth == 0:
-        return heuristic(game_state, player), None
+        return heuristic(game_state, player, node), None
 
     if player == 1 :
         target_player = game_state.player1
@@ -166,7 +167,6 @@ def minimax(game_state, depth, alpha, beta, maximizing_player, player):
     random.shuffle(moves)
 
     for move in moves:
-
         temp_state = copy.deepcopy(game_state)
         
         if (maximizing_player):
@@ -180,13 +180,23 @@ def minimax(game_state, depth, alpha, beta, maximizing_player, player):
         
         child = game_state.next_state(temp_state, move, player, target)
         if child.winner == opponent:
+            heuristic(child, player, node)
             eval = -(LOSE_WEIGHT)
         elif child.winner == 0:
+            heuristic(child, player, node)
             eval = -(DRAW_WEIGHT)
         elif child.winner == player:
+            heuristic(child, player, node)
             eval = (WIN_WEIGHT)
-        else:        
-            eval, _ = minimax(child, depth - 1, alpha, beta, not maximizing_player, player)
+        else:
+            next_node = logger.MinMax_Node()     
+            if move == "LEFT":
+                node.left_child = next_node
+            if move == "STRAIGHT":
+                node.center_child = next_node
+            if move == "RIGHT":
+                node.right_child = next_node
+            eval, _ = minimax(child, depth - 1, alpha, beta, not maximizing_player, player, next_node, logging)
 
         if maximizing_player:
             if debug:  print(f'{"    "*depth}(MinMax @ {depth}) MAXIMIZE START {eval}  {best_val}')
@@ -210,28 +220,39 @@ def minimax(game_state, depth, alpha, beta, maximizing_player, player):
             break
     if debug:  
         print(f'{"    "*depth}(MinMax @ {depth}) **EndMinMax Player: {target} - {best_move} at {best_val}')
+    node.choice = best_move
+    if node.left_child and best_move == "LEFT":
+        node.heuristic = node.left_child.heuristic
+    if node.center_child and best_move == "STRAIGHT":
+        node.heuristic = node.center_child.heuristic
+    if node.right_child and best_move == "RIGHT":
+        node.heuristic = node.right_child.heuristic
     return best_val, best_move
 
-def iterative_deepening(game_state, max_depth, player):
+def iterative_deepening(game_state, max_depth, player, player_root_node, logging):
     best_move = None
     status = game_state.get_status()
-    #for depth in range(1, max_depth + 1):
+    # Disabled for speed purposes
+    # for depth in range(1, max_depth + 1):
     eval, move = minimax(
-            game_state, max_depth, float("-inf"), float("inf"), True, player
+            game_state, max_depth, float("-inf"), float("inf"), True, player, player_root_node , logging
     )
     if move:
         best_move = move
     return eval, best_move
 
 
-def decide_move(game_state, max_depth, player):
+def decide_move(game_state, max_depth, player, step_logger, logging):
+    node = logger.MinMax_Node()
     if player == 1:
         target = game_state.player1
+        step_logger.p1_tree = node
     else:
         target = game_state.player2
+        step_logger.p2_tree = node
     temp_state = copy.deepcopy(game_state)
     if debug:  print(f'#### Player {player} @ ({target.x},{target.y}) facing {target.direction} is thinking.... ####')
-    eval, best_move = iterative_deepening(temp_state, max_depth, player)
+    eval, best_move = iterative_deepening(temp_state, max_depth, player, node, logging)
     if debug:  print(f'==== Player {player} @ ({target.x},{target.y}) facing {target.direction} finally picked {best_move} ({eval}) ====\n')
     #stateUtils.gamestateSnapshot(game_state.MAP_SIZE , game_state)
     return best_move

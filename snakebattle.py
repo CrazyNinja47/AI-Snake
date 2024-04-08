@@ -6,17 +6,25 @@ import random
 from pygame.locals import *
 import minimax as minimax
 import copy
-import stateUtils as stateUtils
+import logger as logger
+import pickle
 
-FRAME_RATE = 20
-MAP_SIZE = [30  , 30]
+
+
+FRAME_RATE = 30
+MAP_SIZE = [15  , 15]
 TILE_SIZE = 10
 START_LENGTH = 5
 
 debug = False
+logging = True
 
 
-MAX_DEPTH = 7
+MAX_DEPTH = 5
+# Log the last XX moves (each move includes both players)
+LOG_LIMIT = 12
+LOG_TYPE = "MinMax"
+LOG_NAME = "log"
 
 using_minimax_1 = True
 using_minimax_2 = True
@@ -27,12 +35,13 @@ using_minimax_2 = True
 # Needs to be able to determine future states for minimax.
 class GameState:
     MAP_SIZE = MAP_SIZE
-    def __init__(self, player1=None, player2=None, food=None, winner=None):
+    def __init__(self, player1=None, player2=None, food=None, winner=None, food_drawn =False):
         self.player1 = copy.deepcopy(player1)
         self.player2 = copy.deepcopy(player2)
         self.food = copy.deepcopy(food)
         self.winner = copy.deepcopy(winner)
         self.initialized = True
+        self.food_drawn = food_drawn
 
 
     # def reset():
@@ -44,18 +53,20 @@ class GameState:
 
 
 
-    def update(self, player1, player2, food, winner):
+    def update(self, player1, player2, food, winner, food_drawn):
         self.player1 = copy.deepcopy(player1)
         self.player2 = copy.deepcopy(player2)
         self.food = food
         self.winner = winner
+        self.food_drawn = food_drawn
 
     def get_status(self):
         return GameState(
             copy.deepcopy(self.player1),
             copy.deepcopy(self.player2),
             copy.deepcopy(self.food),
-            copy.deepcopy(self.winner)
+            copy.deepcopy(self.winner),
+            copy.deepcopy(self.food_drawn)
         )
 
 
@@ -66,7 +77,6 @@ class GameState:
         return f"Player1: [{self.player1.x}, {self.player1.y}] | Player2: [{self.player2.x}, {self.player2.y}] | Food: [{self.food[0]}, {self.food[1]}] | Winner: {self.winner}"
 
     def next_state(self, state, move, player, moving):
-        if debug: print ("\t\t\t$$$ ---$$$")
 
         state.player1.just_ate = False
         state.player2.just_ate = False
@@ -92,7 +102,6 @@ class GameState:
         #     opp_direction = self_direction
         #     self_direction = temp
 
-        if debug:  print(f'\t\t(Next State)Scoring for {player}, but moving Player {moving} @ ({moving_player.x},{moving_player.y}) and facing {moving_player.direction} is considering {move}')
 
         if move == "LEFT":
             moving_player.left = True
@@ -109,7 +118,7 @@ class GameState:
         moving_player.x += moving_player.direction[0]
         moving_player.y += moving_player.direction[1]
 
-        if debug:  print(f'\t\t(Next State) PLAYER {moving} NOW AT SPOT: ({moving_player.x},{moving_player.y})')
+
 
         new_gs = state
         new_gs.winner = None
@@ -149,7 +158,6 @@ class GameState:
             or opponent.x < 0
             or opponent.y < 0
         ):
-            if debug:  print(f'\t\tPlayer {target_win} says: We both ran off the borders')
             new_gs.winner = 0
         else:
             if (
@@ -159,10 +167,8 @@ class GameState:
                 or target_player.y < 0
             ):
                 if new_gs.winner == None:
-                    if debug:  print(f'\t\tPlayer {target_win} says:  I ran off the board')
                     new_gs.winner = opponent_win
                 else:
-                    if debug:  print(f'\t\tPlayer {target_win} says: I ran off board but they died somehow')
                     new_gs.winner = 0
             elif (
                 opponent.x >= TILES_X
@@ -171,15 +177,12 @@ class GameState:
                 or opponent.y < 0
             ):
                 if new_gs.winner == None:
-                    if debug:  print(f'\t\tPlayer {target_win} says: They ran off board, I win')
                     new_gs.winner = target_win
                 else:
-                    if debug:  print(f'\t\tPlayer {target_win} says: They ran off board, but I died somehow?')
                     new_gs.winner = 0
 
         # check game over (touch)
         if (target_player.x == opponent.x and target_player.y == opponent.y and new_gs.winner is None):
-            if debug:  print(f'\t\tPlayer {target_win} says: Kamikaze Attack, we will tie')
             new_gs.winner = 0
         else:
             # Check our tail
@@ -189,7 +192,6 @@ class GameState:
                     #if debug: print(f'Checking P1: #{index} - ({i[0]},{i[1]})')
                     if i[0] == opponent.x and i[1] == opponent.y:
                         if new_gs.winner == None:
-                            if debug:  print(f'\t\tPlayer {target_win} says: We killed player {opponent_win} with our tail using {move}')
                             new_gs.winner = target_win
                             break
                         else:
@@ -199,11 +201,9 @@ class GameState:
                     #if debug: print(f'Comparing P1 head ({target_player.x},{target_player.y}) to its tail: #{index} - ({i[0]},{i[1]})')
                     if index != 0 and i[0] == target_player.x and i[1] == target_player.y:
                         if new_gs.winner == None:
-                            if debug:  print(f'\t\tPlayer {target_win} says: We ate our own tail with {move}')
                             new_gs.winner = opponent_win
                             break
                         else:
-                            if debug:  print(f'\t\tPlayer {target_win} says: We ate our own tail with {move}, but they died somehow')
                             new_gs.winner = 0
                             break
             # Check Opponent Tail
@@ -212,32 +212,23 @@ class GameState:
                 for index, i in enumerate(opponent.tail):
                     if i[0] == target_player.x and i[1] == target_player.y:
                         if new_gs.winner == None:
-                            if debug:  print(f'\t\tPlayer {target_win} says: We were killed by their tail with {move}')
                             new_gs.winner = opponent_win
                             break
                         else:
-                            if debug:  print(f'\t\tPlayer {target_win} says: We were killed by their tail with {move} but they died somehow')                            
                             new_gs.winner = 0
                             break
                         if index != 0 and i[0] == opponent.x and i[1] == opponent.y:
                             if new_gs.winner == None:
-                                if debug:  print(f'\t\tPlayer {target_win} says: They ate their own tail when we went {move}')
                                 new_gs.winner = target_win
                                 break
                             else:
                                 new_gs.winner = 0
                                 break
-        if new_gs.winner == 0:
-            if debug: print(f'\t\tPlayer {target_win} says: I forsee a draw')
-        elif new_gs.winner != target_win and new_gs.winner is not None:
-            if debug: print(f'\t\tPlayer {target_win} says: I will lose! {new_gs.winner} will win')
-        elif new_gs.winner != opponent_win and new_gs.winner is not None:
-            if debug: print(f'\t\tPlayer {target_win} says: I will win')
-        if debug: print ("\t\t\t$$$ ---  $$$")
         return new_gs
 
 
 gs = GameState()
+
 
 # start arguments
 arg_parser = argparse.ArgumentParser()
@@ -309,7 +300,7 @@ COLOR_BG = (30, 30, 30)  # background
 COLOR_FG = (255, 255, 255)  # foreground
 COLOR_P1 = (255, 30, 30)  # player 1
 COLOR_P2 = (30, 255, 30)  # player 2
-COLOR_FD = (255, 200, 30)  # food
+COLOR_FD = (255, 200, 220)  # food
 COLOR_DB = (50, 150, 250)  # debug
 
 # settings
@@ -371,6 +362,7 @@ def game_over_msg(winner):
         )
 
 
+
 # food
 food_drawn = False
 food_x = None
@@ -430,10 +422,12 @@ for i in range(1, p2.length + 1):
 p2.last_Tail = None
 p2.just_ate = False
 
+main_log = logger.Log(LOG_LIMIT,LOG_TYPE, MAP_SIZE)
 
 # main loop
 while winner == None:
-    gs.update(player1=p1, player2=p2, food=(food_x, food_y), winner=winner)
+    current_step = logger.MinMax_Step()
+    gs.update(player1=p1, player2=p2, food=(food_x, food_y), winner=winner, food_drawn=food_drawn)
     p1.just_ate = False
     p2.just_ate = False
     # event queue
@@ -463,7 +457,7 @@ while winner == None:
                 p2.turn()
 
     if using_minimax_1:
-        move = minimax.decide_move(gs, MAX_DEPTH, 1)
+        move = minimax.decide_move(gs, MAX_DEPTH, 1, current_step, logging)
         if move == "LEFT":
             p1.left = True
             p1.right = False
@@ -474,7 +468,7 @@ while winner == None:
             p1.turn()
 
     if using_minimax_2:
-        move = minimax.decide_move(gs, MAX_DEPTH, 2)
+        move = minimax.decide_move(gs, MAX_DEPTH, 2, current_step, logging)
         if move == "LEFT":
             p2.left = True
             p2.right = False
@@ -577,6 +571,10 @@ while winner == None:
             20,
         ),
     )
+
+    if logging:
+        current_step.set_world_state(gs, food_drawn)
+        main_log.add_step(current_step)
 
     # check game over (edges)
     if (p1.x >= TILES_X or p1.y >= TILES_Y or p1.x < 0 or p1.y < 0) and (
@@ -697,7 +695,16 @@ while winner == None:
 
     # update
     CLOCK.tick(TPS)
+    # Save current world state to logging if true
     pygame.display.update()
-    if debug:  print("############## TURN END  ########################")
 
+
+if logging:
+    gs.update(player1=p1, player2=p2, food=(food_x, food_y), winner=winner, food_drawn=food_drawn)
+    current_step.set_world_state(gs, food_drawn)
+    main_log.add_step(current_step)
+    
+    with open(LOG_NAME + '.pkl', "wb") as f:
+        pickle.dump(main_log, f)
+    f.close()
 pygame.time.wait(4000)
