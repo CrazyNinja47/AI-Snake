@@ -5,6 +5,7 @@ import os
 import random
 from pygame.locals import *
 import minimax as minimax
+import astar as astar
 import copy
 import logger as logger
 import pickle
@@ -12,7 +13,7 @@ import pickle
 
 
 FRAME_RATE = 30
-MAP_SIZE = [15  , 15]
+MAP_SIZE = [30  , 30]
 TILE_SIZE = 10
 START_LENGTH = 5
 
@@ -26,8 +27,11 @@ LOG_LIMIT = 12
 LOG_TYPE = "MinMax"
 LOG_NAME = "log"
 
-using_minimax_1 = True
-using_minimax_2 = True
+using_minimax_1 = False
+using_minimax_2 = False
+using_astar_1 = True
+using_astar_2 = False
+
 
 
 
@@ -478,6 +482,28 @@ while winner == None:
             p2.right = True
             p2.turn()
 
+    if using_astar_1:
+        move = astar.decide_move(gs, gs.player1, p1.direction, p1.tail[1:] + p2.tail)
+        if move == "LEFT":
+            p1.left = True
+            p1.right = False
+            p1.turn()
+        elif move == "RIGHT":
+            p1.left = False
+            p1.right = True
+            p1.turn()
+
+    if using_astar_2:
+        move = astar.decide_move(gs, gs.player2, p2.direction, p2.tail[1:] + p1.tail)
+        if move == "LEFT":
+            p2.left = True
+            p2.right = False
+            p2.turn()
+        elif move == "RIGHT":
+            p2.left = False
+            p2.right = True
+            p2.turn()
+
     p1.left = False
     p1.right = False
     p2.left = False
@@ -543,7 +569,7 @@ while winner == None:
             p2.length += 1
             food_drawn = False
     else:
-        if random.random() > 0.95:
+        if random.random() > 0:
             food_x = random.choice(range(1, TILES_X - 1))
             food_y = random.choice(range(1, TILES_Y - 1))
             food_drawn = True
