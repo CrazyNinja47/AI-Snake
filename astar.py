@@ -21,7 +21,7 @@ class AStar_Node():
 
 #Heuristic uses the euclidian distance between food and snake"
 def heuristic(a, b):
-    return math.sqrt((a[0] - b[0]) ** 2) + ((a[1] - b[1]) ** 2)
+    return math.sqrt(((a[0] - b[0]) ** 2) + ((a[1] - b[1]) ** 2))
 
 def a_star_search(start_pos, food_pos, tail_locations):
 
