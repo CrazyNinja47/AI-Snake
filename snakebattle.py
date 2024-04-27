@@ -20,16 +20,16 @@ START_LENGTH = 5
 debug = False
 logging = True
 
-
-MAX_DEPTH = 5
+headless = False
+MAX_DEPTH = 6
 # Log the last XX moves (each move includes both players)
 LOG_LIMIT = 12
 LOG_TYPE = "MinMax"
 LOG_NAME = "log"
 
-using_minimax_1 = False
-using_minimax_2 = False
-using_astar_1 = True
+using_minimax_1 = True
+using_minimax_2 = True
+using_astar_1 = False
 using_astar_2 = False
 
 
@@ -46,6 +46,8 @@ class GameState:
         self.winner = copy.deepcopy(winner)
         self.initialized = True
         self.food_drawn = food_drawn
+        self.player1_full = False
+        self.player2_full = False
 
 
     # def reset():
@@ -138,8 +140,13 @@ class GameState:
                 )
 
         if moving_player.x == state.food[0] and moving_player.y == state.food[1]:
+            state.food_drawn = False
             moving_player.tail.append(moving_player.last_Tail)
             moving_player.just_ate = True
+            if moving == 1:
+                self.player1_full = True
+            else:
+                self.player2_full = True
             # moving_player.tail.insert(
             #     0,
             #     (
@@ -443,6 +450,9 @@ while winner == None:
             sys.exit()
         # keyboard mode
         elif event.type == KEYDOWN and not args.raspi:
+            if (event.key == K_DELETE):
+                #force draw
+                winner = 0
             if (event.key == K_a) and not using_minimax_1:
                 p1.left = True
                 p1.right = False
@@ -504,6 +514,8 @@ while winner == None:
             p2.right = True
             p2.turn()
 
+            
+
     p1.left = False
     p1.right = False
     p2.left = False
@@ -515,8 +527,9 @@ while winner == None:
 
 
     # draw head
-    pygame.draw.rect(DISPLAY_SURFACE, COLOR_P1, get_dimension(p1.x, p1.y, 1, 1))
-    pygame.draw.rect(DISPLAY_SURFACE, COLOR_P2, get_dimension(p2.x, p2.y, 1, 1))
+    if (not headless):
+        pygame.draw.rect(DISPLAY_SURFACE, COLOR_P1, get_dimension(p1.x, p1.y, 1, 1))
+        pygame.draw.rect(DISPLAY_SURFACE, COLOR_P2, get_dimension(p2.x, p2.y, 1, 1))
 
     # move head
     p1.x += p1.direction[0]
@@ -542,16 +555,18 @@ while winner == None:
 
 
     # draw tail
-    for i in p1.tail:
-        pygame.draw.rect(DISPLAY_SURFACE, COLOR_P1, get_dimension(i[0], i[1], 1, 1))
-    for i in p2.tail:
-        pygame.draw.rect(DISPLAY_SURFACE, COLOR_P2, get_dimension(i[0], i[1], 1, 1))
+    if (not headless):
+        for i in p1.tail:
+            pygame.draw.rect(DISPLAY_SURFACE, COLOR_P1, get_dimension(i[0], i[1], 1, 1))
+        for i in p2.tail:
+            pygame.draw.rect(DISPLAY_SURFACE, COLOR_P2, get_dimension(i[0], i[1], 1, 1))
 
 
 
     # food
     if food_drawn:
-        pygame.draw.rect(DISPLAY_SURFACE, COLOR_FD, get_dimension(food_x, food_y, 1, 1))
+        if (not headless):
+            pygame.draw.rect(DISPLAY_SURFACE, COLOR_FD, get_dimension(food_x, food_y, 1, 1))
         if p1.x == food_x and p1.y == food_y:
             p1.tail.append(p1.last_Tail)
             p1.just_ate = True
@@ -569,7 +584,7 @@ while winner == None:
             p2.length += 1
             food_drawn = False
     else:
-        if random.random() > 0:
+        if using_astar_1 or using_astar_2 or random.random() > .95:
             food_x = random.choice(range(1, TILES_X - 1))
             food_y = random.choice(range(1, TILES_Y - 1))
             food_drawn = True
