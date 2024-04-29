@@ -33,6 +33,8 @@ using_minimax_1 = False
 using_minimax_2 = True
 # Default P1
 using_NEAT_P1 = True
+# Name of the pickle file with the NEAT NN
+# It's not that impressive...
 P1_NEATFILE = "NEATNeuralWinner.pkl"
 
 using_astar_1 = False
@@ -72,6 +74,9 @@ class GameState:
             return 2
         else:
             return 0 
+
+
+    ########  NEAT VISION METHODS  ########
 
     def get_left(self):
         if self.player1.direction[0] == 0:
@@ -198,7 +203,7 @@ class GameState:
             self.append_onehot(spot,result)
         return result
 
-
+    ########  END OF NEAT VISION METHODS ########
 
     # def reset():
     #     self.Player1 = copy.deepcopy(self.saved_Player1)
