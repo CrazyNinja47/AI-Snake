@@ -32,7 +32,8 @@ NEAT_DEATH = -1000
 NEAT_FOOD = 200
 NEAT_HEARTBEAT = 1
 NEAT_VICTORY = 10000
-NEAT_TIE = -5000
+NEAT_TIE = -500
+NEAT_STARVED = -100000
 
 
 
@@ -88,7 +89,8 @@ class GameState:
             return (self.player1.direction[1] ,self.player1.direction[0])
 
     def append_onehot(self, code, arr):
-        # SAFE  DEATH FOOD
+        # SAFE  DEATH   FOOD
+        # LEFT  MIDDLE  RIGHT
         if code == 0:
             arr.append(1)
             arr.append(0)
@@ -102,27 +104,88 @@ class GameState:
             arr.append(0)
             arr.append(1)
 
-
+    def append_food_side(self, arr):
+        # player facing up or down
+        # UP/DOWN Section
+        if self.player1.direction[0] == 0:
+            # player facing up (we check food's X)
+            if self.player1.direction[1] == (-1):
+                # food is to the left of the player
+                if self.food[0] < self.player1.x:
+                    self.append_onehot(0,arr)
+                # food is directly in front
+                elif self.food[0] == self.player1.x:
+                    self.append_onehot(1,arr)
+                # food is to the right of player
+                elif self.food[0] > self.player1.x:
+                    self.append_onehot(2,arr)
+            # player facing down (we check food's X)
+            if self.player1.direction[1] == (1):
+                # food is to the right of the player
+                if self.food[0] < self.player1.x:
+                    self.append_onehot(2,arr)
+                # food is directly in front
+                elif self.food[0] == self.player1.x:
+                    self.append_onehot(1,arr)
+                # food is to the left of player
+                elif self.food[0] > self.player1.x:
+                    self.append_onehot(0,arr)
+      
+        # LEFT/RIGHT SECTION
+        # Could just else:  but left this for readability
+        elif self.player1.direction[1] == 0:
+            # player facing left (we check food's Y)
+            if self.player1.direction[0] == (-1):
+                # food is to the right of the player
+                if self.food[1] < self.player1.y:
+                    self.append_onehot(2,arr)
+                # food is directly in front
+                elif self.food[1] == self.player1.y:
+                    self.append_onehot(1,arr)
+                # food is to the left of player
+                elif self.food[1] > self.player1.y:
+                    self.append_onehot(0,arr)
+            # player facing right (we check food's Y)
+            if self.player1.direction[0] == (1):
+                # food is to the left of the player
+                if self.food[1] < self.player1.y:
+                    self.append_onehot(0,arr)
+                # food is directly in front
+                elif self.food[1] == self.player1.y:
+                    self.append_onehot(1,arr)
+                # food is to the right of player
+                elif self.food[1] > self.player1.y:
+                    self.append_onehot(2,arr)
 
     def snake_eyes(self):
         #{[P1 X], [P1 Y], [P2 X], [P2 Y], [Food X], [Food Y]}
         result = []
-        result.append(abs(self.player1.x))
-        result.append(abs(self.player1.y))
-        result.append(abs(self.player2.x))
-        result.append(abs(self.player2.y))
+        # Tell snake which way to turn for food one hot-encoded
+        #   0     1     2
+        # Left Center Right
+
         # NOTE NOT SURE ABOUT THIS!
-        if self.food[0]:
-            #print(f"distance {math.sqrt( ((self.player1.x - self.food[0]) ** 2) + ((self.player1.y - self.food[1]) ** 2))}")
-            result.append( math.sqrt( ((self.player1.x - self.food[0]) ** 2) + ((self.player1.y - self.food[1]) ** 2)))
-        else:
-            result.append(0)
-        #{[R Wall Dist], [D Wall Dist]}
+        # Get distance from food, elucidian
+        # if self.food[0]:
+        self.append_food_side(result)
+        result.append( math.sqrt( ((self.player1.x - self.food[0]) ** 2) + ((self.player1.y - self.food[1]) ** 2)))
+        # else:
+            #sometimes food doesn't exist, don't want to throw an error with a None
+            # No food, go right
+            # result.append(0)
+            # result.append(0)
+            # result.append(1)
+            # # distance
+            # result.append(0)
+        # Wall distances - top and left    
+        result.append(self.player1.x)
+        result.append(self.player1.y)
+        # Wall distances - bottom and right
         result.append(abs(MAP_SIZE[0] - self.player1.x))
         result.append(abs(MAP_SIZE[1] - self.player1.y))
         #Adding vision cone, in widening radius
         #Going left to right
-        vision = 3
+        vision = 2
         left = self.get_left()
         right = self.get_right()
         # Onehot Encode
@@ -553,6 +616,16 @@ def eval_genomes(genomes, config):
 
         main_log = logger.Log(LOG_LIMIT,LOG_TYPE, MAP_SIZE)
 
+        safe_spot = False
+        while not safe_spot:
+            food_x = random.choice(range(1, TILES_X - 1))
+            food_y = random.choice(range(1, TILES_Y - 1))
+            if (food_x != p1.x and food_y != p1.y) and (food_x != p2.x and food_y != p2.y):
+                safe_spot = True
+        food_drawn = True
+
+
+
         # main loop
         starvation_timer = 500
         while winner == None:
@@ -736,7 +809,6 @@ def eval_genomes(genomes, config):
                         food_y = random.choice(range(1, TILES_Y - 1))
                         if (food_x != p1.x and food_y != p1.y) and (food_x != p2.x and food_y != p2.y):
                             safe_spot = True
-
                     food_drawn = True
 
             # score
@@ -899,10 +971,13 @@ def eval_genomes(genomes, config):
             # Drop starve timer by one
             starvation_timer -= 1
             if starvation_timer <= 0:
+                # we starved...this should be REALLY BAD.
+                g.fitness += NEAT_STARVED
                 winner = 0
             if (not args.headless):
                 pygame.display.update()
         #pygame.time.wait(4000)
+    
 
 
 
@@ -920,8 +995,9 @@ def run(config_path):
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
     p.add_reporter(neat.Checkpointer(args.checkpoint))
-
+   
     winner = p.run(eval_genomes)
+    
 
 
     print("Best fitness -> {}".format(winner))
