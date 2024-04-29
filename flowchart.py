@@ -147,6 +147,7 @@ def visual_page(screen, page, storage):
     go_back = Button(screen, font, "white", "select", file_select, "Go back")
     next_pg = Button(screen, font, "white", "next_pg", next_step, "Next")
     prev_pg = Button(screen, font, "white", "prev_pg", prev_step, "Previous")
+    to_visual = Button(screen, font , "white", "visual", visual_page, "Back to visualizer")
     screen.fill("light blue")
     draw_grid(screen,storage.data.map_size)
     update_heuristic(screen, page, storage, storage.index)
@@ -155,6 +156,12 @@ def visual_page(screen, page, storage):
     (prev_pg.place_button((450,450)),prev_pg),
     (next_pg.place_button((650,450)),next_pg)]
     pygame.display.flip()
+
+def view_heuristic(screen, page, storage, step):
+    screen.fill("light blue")
+    pygame.draw.rect(screen,"black", ((24,404) ,(200,150)))
+    pygame.draw.rect(screen,"grey", ((20,400) ,(200,150)))
+
 
 
 def update_heuristic(screen,page,storage, step):
@@ -166,6 +173,17 @@ def update_heuristic(screen,page,storage, step):
     P2_step = storage.data.steps[step].p2_tree
     if P2_step.heuristic:
         p2_val = str(round(sum(P2_step.heuristic.values()),4))
+        print(f'P2 Choice: {P2_step.choice}')
+        print(f'P2 Loc: ({storage.data.steps[step].world.p2_x},{storage.data.steps[step].world.p2_y})')
+        print(f'Food Loc: ({storage.data.steps[step].world.food})')
+        if P2_step.left_child:
+            print(f'\tLeft Heuristic ({str(round(sum(P2_step.left_child.heuristic.values()),4))}): {P2_step.left_child.heuristic}')
+        if P2_step.center_child:
+            print(f'\tCenter Heuristic ({str(round(sum(P2_step.center_child.heuristic.values()),4))}): {P2_step.center_child.heuristic}')
+        if P2_step.right_child:
+            print(f'\tRight Heuristic: ({str(round(sum(P2_step.right_child.heuristic.values()),4))}){P2_step.right_child.heuristic}')
+
+    
     else:
         p2_val = "NO HEURISTIC?"
     text6, text_pos6 = storage.font.render(p2_val,"black","grey",1)
@@ -184,6 +202,17 @@ def update_heuristic(screen,page,storage, step):
     P1_step = storage.data.steps[step].p1_tree
     if P1_step.heuristic:
         p1_val = str(round(sum(P1_step.heuristic.values()),4))
+        print(f'P1 Choice: {P1_step.choice} and facing {storage.data.steps[step].world.p1_direction}')
+        print(f'P1 Loc: ({storage.data.steps[step].world.p1_x},{storage.data.steps[step].world.p1_y})')
+        print(f'Food Loc: ({storage.data.steps[step].world.food})')
+        if P1_step.left_child:
+            print(f'\tLeft Heuristic ({str(round(sum(P1_step.left_child.heuristic.values()),4))}): {P1_step.left_child.heuristic}')
+        if P1_step.center_child:
+            print(f'\tCenter Heuristic ({str(round(sum(P1_step.center_child.heuristic.values()),4))}): {P1_step.center_child.heuristic}')
+        if P1_step.right_child:
+            print(f'\tRight Heuristic: ({str(round(sum(P1_step.right_child.heuristic.values()),4))}){P1_step.right_child.heuristic}')
+        print("\n---------")
+
     else:
         p1_val = "NO HEURISTIC?"
     text5, text_pos5 = storage.font.render(p1_val,"black","grey",1)

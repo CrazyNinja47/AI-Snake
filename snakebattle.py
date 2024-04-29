@@ -9,10 +9,12 @@ import astar as astar
 import copy
 import logger as logger
 import pickle
+import neat
+import math
 
 
 
-FRAME_RATE = 30
+FRAME_RATE = 15
 MAP_SIZE = [30  , 30]
 TILE_SIZE = 10
 START_LENGTH = 5
@@ -20,16 +22,22 @@ START_LENGTH = 5
 debug = False
 logging = True
 
-
-MAX_DEPTH = 5
+headless = False
+MAX_DEPTH = 6
 # Log the last XX moves (each move includes both players)
 LOG_LIMIT = 12
 LOG_TYPE = "MinMax"
 LOG_NAME = "log"
 
 using_minimax_1 = False
-using_minimax_2 = False
-using_astar_1 = True
+using_minimax_2 = True
+# Default P1
+using_NEAT_P1 = True
+# Name of the pickle file with the NEAT NN
+# It's not that impressive...
+P1_NEATFILE = "NEATNeuralWinner.pkl"
+
+using_astar_1 = False
 using_astar_2 = False
 
 
@@ -46,7 +54,156 @@ class GameState:
         self.winner = copy.deepcopy(winner)
         self.initialized = True
         self.food_drawn = food_drawn
+        self.player1_full = False
+        self.player2_full = False
 
+    def get_square(self, x,y):
+        # Is it our tail?
+        for index, i in enumerate(self.player1.tail):
+                    if i[0] == x and i[1] == y:
+                        return 1
+        # Is it their tail?
+        for index, i in enumerate(self.player2.tail):
+                    if i[0] == x and i[1] == y:
+                        return 1
+        # Is it outside?
+        if x >= TILES_X or y >= TILES_Y or x < 0 or y < 0:
+            return 1
+        # Is it food?
+        if x == self.food[0] and y == self.food[1]:
+            return 2
+        else:
+            return 0 
+
+
+    ########  NEAT VISION METHODS  ########
+
+    def get_left(self):
+        if self.player1.direction[0] == 0:
+            return (self.player1.direction[1], self.player1.direction[0])
+        else:
+            return (self.player1.direction[1]* (-1),self.player1.direction[0])
+    
+    def get_right(self):
+        if self.player1.direction[0] == 0:
+            return (self.player1.direction[1] * (-1), self.player1.direction[0])
+        else:
+            return (self.player1.direction[1] ,self.player1.direction[0])
+
+    def append_onehot(self, code, arr):
+        # SAFE  DEATH   FOOD
+        # LEFT  MIDDLE  RIGHT
+        if code == 0:
+            arr.append(1)
+            arr.append(0)
+            arr.append(0)
+        elif code == 1:
+            arr.append(0)
+            arr.append(1)
+            arr.append(0)
+        elif code == 2:
+            arr.append(0)
+            arr.append(0)
+            arr.append(1)
+
+    def append_food_side(self, arr):
+        # player facing up or down
+        # UP/DOWN Section
+        if self.player1.direction[0] == 0:
+            # player facing up (we check food's X)
+            if self.player1.direction[1] == (-1):
+                # food is to the left of the player
+                if self.food[0] < self.player1.x:
+                    self.append_onehot(0,arr)
+                # food is directly in front
+                elif self.food[0] == self.player1.x:
+                    self.append_onehot(1,arr)
+                # food is to the right of player
+                elif self.food[0] > self.player1.x:
+                    self.append_onehot(2,arr)
+            # player facing down (we check food's X)
+            if self.player1.direction[1] == (1):
+                # food is to the right of the player
+                if self.food[0] < self.player1.x:
+                    self.append_onehot(2,arr)
+                # food is directly in front
+                elif self.food[0] == self.player1.x:
+                    self.append_onehot(1,arr)
+                # food is to the left of player
+                elif self.food[0] > self.player1.x:
+                    self.append_onehot(0,arr)
+      
+        # LEFT/RIGHT SECTION
+        # Could just else:  but left this for readability
+        elif self.player1.direction[1] == 0:
+            # player facing left (we check food's Y)
+            if self.player1.direction[0] == (-1):
+                # food is to the right of the player
+                if self.food[1] < self.player1.y:
+                    self.append_onehot(2,arr)
+                # food is directly in front
+                elif self.food[1] == self.player1.y:
+                    self.append_onehot(1,arr)
+                # food is to the left of player
+                elif self.food[1] > self.player1.y:
+                    self.append_onehot(0,arr)
+            # player facing right (we check food's Y)
+            if self.player1.direction[0] == (1):
+                # food is to the left of the player
+                if self.food[1] < self.player1.y:
+                    self.append_onehot(0,arr)
+                # food is directly in front
+                elif self.food[1] == self.player1.y:
+                    self.append_onehot(1,arr)
+                # food is to the right of player
+                elif self.food[1] > self.player1.y:
+                    self.append_onehot(2,arr)
+
+    def snake_eyes(self):
+        #{[P1 X], [P1 Y], [P2 X], [P2 Y], [Food X], [Food Y]}
+        result = []
+        # Tell snake which way to turn for food one hot-encoded
+        #   0     1     2
+        # Left Center Right
+        # NOTE NOT SURE ABOUT THIS!
+        # Get distance from food, elucidian
+        # if self.food[0]:
+        self.append_food_side(result)
+        result.append( math.sqrt( ((self.player1.x - self.food[0]) ** 2) + ((self.player1.y - self.food[1]) ** 2)))
+        # else:
+            #sometimes food doesn't exist, don't want to throw an error with a None
+            # No food, go right
+            # result.append(0)
+            # result.append(0)
+            # result.append(1)
+            # # distance
+            # result.append(0)
+        # Wall distances - top and left    
+        result.append(self.player1.x)
+        result.append(self.player1.y)
+        # Wall distances - bottom and right
+        result.append(abs(MAP_SIZE[0] - self.player1.x))
+        result.append(abs(MAP_SIZE[1] - self.player1.y))
+        #Adding vision cone, in widening radius
+        #Going left to right
+        vision = 2
+        left = self.get_left()
+        right = self.get_right()
+        # Onehot Encode
+        # EMPTY DANGER FOOD
+        #   0      1    2
+        for i in range(1,vision + 1):
+            # left:
+            spot = self.get_square((self.player1.x + (left[0] * i)),(self.player1.x + (left[1]* i)) )
+            self.append_onehot(spot,result)
+            # center:
+            spot = self.get_square((self.player1.x + (self.player1.direction[0] * i)),(self.player1.x + (self.player1.direction[1] * i)) )
+            self.append_onehot(spot,result)
+            spot = self.get_square((self.player1.x + (right[0] * i)),(self.player1.x + (right[1]* i)) )
+            self.append_onehot(spot,result)
+        return result
+
+    ########  END OF NEAT VISION METHODS ########
 
     # def reset():
     #     self.Player1 = copy.deepcopy(self.saved_Player1)
@@ -138,8 +295,13 @@ class GameState:
                 )
 
         if moving_player.x == state.food[0] and moving_player.y == state.food[1]:
+            state.food_drawn = False
             moving_player.tail.append(moving_player.last_Tail)
             moving_player.just_ate = True
+            if moving == 1:
+                self.player1_full = True
+            else:
+                self.player2_full = True
             # moving_player.tail.insert(
             #     0,
             #     (
@@ -232,6 +394,7 @@ class GameState:
 
 
 gs = GameState()
+
 
 
 # start arguments
@@ -428,6 +591,32 @@ p2.just_ate = False
 
 main_log = logger.Log(LOG_LIMIT,LOG_TYPE, MAP_SIZE)
 
+# Initialize food right off bat
+safe_spot = False
+while not safe_spot:
+    food_x = random.choice(range(1, TILES_X - 1))
+    food_y = random.choice(range(1, TILES_Y - 1))
+    if (food_x != p1.x and food_y != p1.y) and (food_x != p2.x and food_y != p2.y):
+        safe_spot = True
+food_drawn = True
+
+
+if using_NEAT_P1:
+    genome = None
+    local_dir = os.path.dirname(__file__)
+    config_path = os.path.join(local_dir, "NEATSnakeConfig.txt")
+    config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
+						neat.DefaultSpeciesSet, neat.DefaultStagnation,
+						config_path)
+    with open(P1_NEATFILE, "rb") as f:
+        genome = pickle.load(f)
+    f.close()
+    net = neat.nn.FeedForwardNetwork.create(genome, config)
+    
+
+
+
+
 # main loop
 while winner == None:
     current_step = logger.MinMax_Step()
@@ -443,6 +632,9 @@ while winner == None:
             sys.exit()
         # keyboard mode
         elif event.type == KEYDOWN and not args.raspi:
+            if (event.key == K_DELETE):
+                #force draw
+                winner = 0
             if (event.key == K_a) and not using_minimax_1:
                 p1.left = True
                 p1.right = False
@@ -459,6 +651,24 @@ while winner == None:
                 p2.right = True
                 p2.left = False
                 p2.turn()
+
+    if using_NEAT_P1:
+        #print("NN:\n {}".format(genome))
+        #print(f"{gs.snake_eyes()}")
+        choices = net.activate(gs.snake_eyes())
+        ourmax = max(choices)
+        #print(f"Our choices: {choices}")
+        move = choices.index(ourmax)
+        #print(f"Snakeyes: picks {move} of {choices}")
+        if move == 0:
+            # Left
+            p1.left = True
+            p1.right = False
+            p1.turn()
+        elif move == 2:
+            p1.left = False
+            p1.right = True
+            p1.turn()
 
     if using_minimax_1:
         move = minimax.decide_move(gs, MAX_DEPTH, 1, current_step, logging)
@@ -504,6 +714,8 @@ while winner == None:
             p2.right = True
             p2.turn()
 
+            
+
     p1.left = False
     p1.right = False
     p2.left = False
@@ -515,8 +727,9 @@ while winner == None:
 
 
     # draw head
-    pygame.draw.rect(DISPLAY_SURFACE, COLOR_P1, get_dimension(p1.x, p1.y, 1, 1))
-    pygame.draw.rect(DISPLAY_SURFACE, COLOR_P2, get_dimension(p2.x, p2.y, 1, 1))
+    if (not headless):
+        pygame.draw.rect(DISPLAY_SURFACE, COLOR_P1, get_dimension(p1.x, p1.y, 1, 1))
+        pygame.draw.rect(DISPLAY_SURFACE, COLOR_P2, get_dimension(p2.x, p2.y, 1, 1))
 
     # move head
     p1.x += p1.direction[0]
@@ -542,16 +755,18 @@ while winner == None:
 
 
     # draw tail
-    for i in p1.tail:
-        pygame.draw.rect(DISPLAY_SURFACE, COLOR_P1, get_dimension(i[0], i[1], 1, 1))
-    for i in p2.tail:
-        pygame.draw.rect(DISPLAY_SURFACE, COLOR_P2, get_dimension(i[0], i[1], 1, 1))
+    if (not headless):
+        for i in p1.tail:
+            pygame.draw.rect(DISPLAY_SURFACE, COLOR_P1, get_dimension(i[0], i[1], 1, 1))
+        for i in p2.tail:
+            pygame.draw.rect(DISPLAY_SURFACE, COLOR_P2, get_dimension(i[0], i[1], 1, 1))
 
 
 
     # food
     if food_drawn:
-        pygame.draw.rect(DISPLAY_SURFACE, COLOR_FD, get_dimension(food_x, food_y, 1, 1))
+        if (not headless):
+            pygame.draw.rect(DISPLAY_SURFACE, COLOR_FD, get_dimension(food_x, food_y, 1, 1))
         if p1.x == food_x and p1.y == food_y:
             p1.tail.append(p1.last_Tail)
             p1.just_ate = True
@@ -569,9 +784,15 @@ while winner == None:
             p2.length += 1
             food_drawn = False
     else:
-        if random.random() > 0:
-            food_x = random.choice(range(1, TILES_X - 1))
-            food_y = random.choice(range(1, TILES_Y - 1))
+        # .95 normally
+        if using_astar_1 or using_astar_2 or random.random() > 0:
+            # prevent snake/food spawning
+            safe_spot = False
+            while not safe_spot:
+                food_x = random.choice(range(1, TILES_X - 1))
+                food_y = random.choice(range(1, TILES_Y - 1))
+                if (food_x != p1.x and food_y != p1.y) and (food_x != p2.x and food_y != p2.y):
+                    safe_spot = True
             food_drawn = True
 
     # score

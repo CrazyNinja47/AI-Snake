@@ -2,14 +2,14 @@
 import copy as copy
 import random as random
 import logger 
-LENGTH_WEIGHT = 50
-AGGRO_WEIGHT = 10
-FOOD_DIST_WEIGHT = 20
-EATING_WEIGHT = 40
-WIN_WEIGHT = 1000
-LOSE_WEIGHT = 1000
-DRAW_WEIGHT = 500
-EDGE_WEIGHT = 3
+LENGTH_WEIGHT = 10
+AGGRO_WEIGHT = 15
+FOOD_DIST_WEIGHT = 10
+EATING_WEIGHT = 500
+WIN_WEIGHT = 3000
+LOSE_WEIGHT = 3000
+DRAW_WEIGHT = 2000
+EDGE_WEIGHT = 5
 
 debug = False
 
@@ -58,13 +58,14 @@ def heuristic(game_state, player, node):
 
     score += aggro_score
     test.update(({'aggro':aggro_score}))
+
     food_distance = 0
 
     # Penalize for moving away from food
     if (food_x is not None) and (food_y is not None):
-        if player == 2:
+        if player == 2 and not game_state.player2_full:
             food_distance = abs(player2.x - food_x) + abs(player2.y - food_y)
-        else:
+        elif not game_state.player1_full:
             food_distance = abs(player1.x - food_x) + abs(player1.y - food_y)
         dis_score = food_distance * FOOD_DIST_WEIGHT
     else:
@@ -76,18 +77,18 @@ def heuristic(game_state, player, node):
     # Reward for eating, not spinning around food!
     eaten_score = 0
     if player == 2:
-        if player2.just_ate:
+        if game_state.player2_full:
             test.update(({'eaten':EATING_WEIGHT}))
             eaten_score = EATING_WEIGHT
-        if player1.just_ate:
+        if game_state.player1_full:
             test.update(({'eaten':-EATING_WEIGHT}))
             eaten_score = -EATING_WEIGHT
 
     else:
-        if player1.just_ate:
+        if game_state.player1_full:
             test.update(({'eaten':EATING_WEIGHT}))
             eaten_score = EATING_WEIGHT
-        if player2.just_ate:
+        if game_state.player2_full:
             test.update(({'eaten':-EATING_WEIGHT}))
             eaten_score = -EATING_WEIGHT
 
@@ -127,15 +128,15 @@ def heuristic(game_state, player, node):
 
     if playerID.x < 2 or playerID.x >= (game_state.MAP_SIZE[0] - 2 ):
         score -= EDGE_WEIGHT
-        test.update(({'edge':-(DRAW_WEIGHT)}))
+        test.update(({'edge':-(EDGE_WEIGHT)}))
     if playerID.y < 2 or playerID.y >= (game_state.MAP_SIZE[1] - 2 ):
         score -= EDGE_WEIGHT
-        test.update(({'edge':-(DRAW_WEIGHT)}))
+        test.update(({'edge':-(EDGE_WEIGHT)}))
     if enemyID.x < 2 or enemyID.x >= (game_state.MAP_SIZE[0] - 2 ):
         score += EDGE_WEIGHT
-        test.update(({'edge':(DRAW_WEIGHT)}))
+        test.update(({'edge':(EDGE_WEIGHT)}))
     if enemyID.y < 2 or enemyID.y >= (game_state.MAP_SIZE[1] - 2 ):
-        test.update(({'edge':(DRAW_WEIGHT)}))  
+        test.update(({'edge':(EDGE_WEIGHT)}))  
         score += EDGE_WEIGHT
 
 
@@ -166,9 +167,9 @@ def minimax(game_state, depth, alpha, beta, maximizing_player, player, node, log
     moves = ["LEFT","STRAIGHT","RIGHT"]
     random.shuffle(moves)
 
+
     for move in moves:
-        temp_state = copy.deepcopy(game_state)
-        
+        temp_state = copy.deepcopy(game_state)        
         if (maximizing_player):
             # We're maximizing, move us around
             target = player
@@ -178,16 +179,16 @@ def minimax(game_state, depth, alpha, beta, maximizing_player, player, node, log
             if debug: print(f'{"    "*depth}(MinMax @ {depth}) Opponent {opponent} is facing {target_player.direction}, Checking {move} at depth {depth}!', flush=True)
             target = opponent
         
-        child = game_state.next_state(temp_state, move, player, target)
+        child = temp_state.next_state(temp_state, move, player, target)
         if child.winner == opponent:
-            heuristic(child, player, node)
-            eval = -(LOSE_WEIGHT)
+            
+            eval = heuristic(child, player, node)
         elif child.winner == 0:
             heuristic(child, player, node)
-            eval = -(DRAW_WEIGHT)
+            eval = heuristic(child, player, node)
         elif child.winner == player:
             heuristic(child, player, node)
-            eval = (WIN_WEIGHT)
+            eval = heuristic(child, player, node)
         else:
             next_node = logger.MinMax_Node()     
             if move == "LEFT":
