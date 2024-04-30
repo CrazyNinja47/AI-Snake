@@ -36,6 +36,7 @@ using_NEAT_P2 = False
 # Name of the pickle file with the NEAT NN
 # It's not that impressive...
 P1_NEATFILE = "NEATNeuralWinner.pkl"
+P2_NEATFILE = "NEATNeuralWinner.pkl"
 
 using_astar_1 = False
 using_astar_2 = False
@@ -476,9 +477,9 @@ if args.headless:
 
 import pygame
 
-
-# center window
-os.environ["SDL_VIDEO_CENTERED"] = "1"
+if not headless:
+    # center window
+    os.environ["SDL_VIDEO_CENTERED"] = "1"
 
 
 # window dimensions
@@ -504,16 +505,19 @@ def get_dimension(x, y, width=0, height=0):
     return (x * TILE_SIZE, y * TILE_SIZE, width * TILE_SIZE, height * TILE_SIZE)
 
 
-# init
-pygame.init()
-pygame.display.set_caption("Snake Battle by Scriptim")
-CLOCK = pygame.time.Clock()
-DISPLAY_SURFACE = pygame.display.set_mode((TILE_SIZE * TILES_X, TILE_SIZE * TILES_Y))
-DISPLAY_SURFACE.fill(COLOR_BG)
+if not headless:
+    # init
+    pygame.init()
+    pygame.display.set_caption("Snake Battle by Scriptim")
+    CLOCK = pygame.time.Clock()
+    DISPLAY_SURFACE = pygame.display.set_mode(
+        (TILE_SIZE * TILES_X, TILE_SIZE * TILES_Y)
+    )
+    DISPLAY_SURFACE.fill(COLOR_BG)
 
-# fonts (change font files here)
-FONT_DB = pygame.font.Font(None, 20)  # debug font
-FONT_SC = pygame.font.Font(None, TILE_SIZE * 5)  # score
+    # fonts (change font files here)
+    FONT_DB = pygame.font.Font(None, 20)  # debug font
+    FONT_SC = pygame.font.Font(None, TILE_SIZE * 5)  # score
 
 # directions
 UP = (0, -1)
@@ -529,26 +533,30 @@ winner = None
 def game_over_msg(winner):
     if winner == 0:
         if p1.length == p2.length:
-            draw = FONT_SC.render("Draw!", 1, COLOR_FG)
-            DISPLAY_SURFACE.blit(
-                draw, (DISPLAY_SURFACE.get_width() / 2 - draw.get_rect().width / 2, 200)
-            )
+            if not headless:
+                draw = FONT_SC.render("Draw!", 1, COLOR_FG)
+                DISPLAY_SURFACE.blit(
+                    draw,
+                    (DISPLAY_SURFACE.get_width() / 2 - draw.get_rect().width / 2, 200),
+                )
         elif p1.length > p2.length:
             game_over_msg(1)
         else:
             game_over_msg(2)
     elif winner == 1:
-        p1_wins = FONT_SC.render("Player 1 wins!", 1, COLOR_P1)
-        DISPLAY_SURFACE.blit(
-            p1_wins,
-            (DISPLAY_SURFACE.get_width() / 2 - p1_wins.get_rect().width / 2, 200),
-        )
+        if not headless:
+            p1_wins = FONT_SC.render("Player 1 wins!", 1, COLOR_P1)
+            DISPLAY_SURFACE.blit(
+                p1_wins,
+                (DISPLAY_SURFACE.get_width() / 2 - p1_wins.get_rect().width / 2, 200),
+            )
     elif winner == 2:
-        p2_wins = FONT_SC.render("Player 2 wins!", 1, COLOR_P2)
-        DISPLAY_SURFACE.blit(
-            p2_wins,
-            (DISPLAY_SURFACE.get_width() / 2 - p2_wins.get_rect().width / 2, 200),
-        )
+        if not headless:
+            p2_wins = FONT_SC.render("Player 2 wins!", 1, COLOR_P2)
+            DISPLAY_SURFACE.blit(
+                p2_wins,
+                (DISPLAY_SURFACE.get_width() / 2 - p2_wins.get_rect().width / 2, 200),
+            )
 
 
 # food
@@ -638,6 +646,21 @@ if using_NEAT_P1:
     f.close()
     net = neat.nn.FeedForwardNetwork.create(genome, config)
 
+if using_NEAT_P2:
+    genome = None
+    local_dir = os.path.dirname(__file__)
+    config_path = os.path.join(local_dir, "NEATSnakeConfig.txt")
+    config = neat.Config(
+        neat.DefaultGenome,
+        neat.DefaultReproduction,
+        neat.DefaultSpeciesSet,
+        neat.DefaultStagnation,
+        config_path,
+    )
+    with open(P2_NEATFILE, "rb") as f:
+        genome = pickle.load(f)
+    f.close()
+    net = neat.nn.FeedForwardNetwork.create(genome, config)
 
 # main loop
 while winner == None:
@@ -652,33 +675,34 @@ while winner == None:
     p1.just_ate = False
     p2.just_ate = False
     # event queue
-    for event in pygame.event.get():
-        # QUIT event
-        if event.type == QUIT:
-            print("## Quit ##")
-            pygame.quit()
-            sys.exit()
-        # keyboard mode
-        elif event.type == KEYDOWN:
-            if event.key == K_DELETE:
-                # force draw
-                winner = 0
-            if (event.key == K_a) and not using_minimax_1:
-                p1.left = True
-                p1.right = False
-                p1.turn()
-            elif (event.key == K_d) and not using_minimax_1:
-                p1.right = True
-                p1.left = False
-                p1.turn()
-            elif (event.key == K_LEFT) and not using_minimax_2:
-                p2.left = True
-                p2.right = False
-                p2.turn()
-            elif (event.key == K_RIGHT) and not using_minimax_2:
-                p2.right = True
-                p2.left = False
-                p2.turn()
+    if not headless:
+        for event in pygame.event.get():
+            # QUIT event
+            if event.type == QUIT:
+                print("## Quit ##")
+                pygame.quit()
+                sys.exit()
+            # keyboard mode
+            elif event.type == KEYDOWN:
+                if event.key == K_DELETE:
+                    # force draw
+                    winner = 0
+                if (event.key == K_a) and not using_minimax_1:
+                    p1.left = True
+                    p1.right = False
+                    p1.turn()
+                elif (event.key == K_d) and not using_minimax_1:
+                    p1.right = True
+                    p1.left = False
+                    p1.turn()
+                elif (event.key == K_LEFT) and not using_minimax_2:
+                    p2.left = True
+                    p2.right = False
+                    p2.turn()
+                elif (event.key == K_RIGHT) and not using_minimax_2:
+                    p2.right = True
+                    p2.left = False
+                    p2.turn()
 
     if using_NEAT_P1:
         # print("NN:\n {}".format(genome))
@@ -697,6 +721,24 @@ while winner == None:
             p1.left = False
             p1.right = True
             p1.turn()
+
+    if using_NEAT_P2:
+        # print("NN:\n {}".format(genome))
+        # print(f"{gs.snake_eyes()}")
+        choices = net.activate(gs.snake_eyes())
+        ourmax = max(choices)
+        # print(f"Our choices: {choices}")
+        move = choices.index(ourmax)
+        # print(f"Snakeyes: picks {move} of {choices}")
+        if move == 0:
+            # Left
+            p2.left = True
+            p2.right = False
+            p2.turn()
+        elif move == 2:
+            p2.left = False
+            p2.right = True
+            p2.turn()
 
     if using_minimax_1:
         move = minimax.decide_move(gs, MAX_DEPTH, 1, current_step, logging)
@@ -747,11 +789,10 @@ while winner == None:
     p2.left = False
     p2.right = False
 
-    # clear
-    DISPLAY_SURFACE.fill(COLOR_BG)
-
-    # draw head
     if not headless:
+        # clear
+        DISPLAY_SURFACE.fill(COLOR_BG)
+        # draw head
         pygame.draw.rect(DISPLAY_SURFACE, COLOR_P1, get_dimension(p1.x, p1.y, 1, 1))
         pygame.draw.rect(DISPLAY_SURFACE, COLOR_P2, get_dimension(p2.x, p2.y, 1, 1))
 
@@ -820,28 +861,29 @@ while winner == None:
             food_drawn = True
 
     # score
-    p1_length_label = FONT_SC.render(str(p1.length), 1, COLOR_P1)
-    sep_length_label = FONT_SC.render(":", 1, COLOR_FG)
-    p2_length_label = FONT_SC.render(str(p2.length), 1, COLOR_P2)
-    DISPLAY_SURFACE.blit(
-        p1_length_label,
-        (
-            DISPLAY_SURFACE.get_width() / 2
-            - p1_length_label.get_rect().width
-            - TILE_SIZE,
-            20,
-        ),
-    )
-    DISPLAY_SURFACE.blit(sep_length_label, (DISPLAY_SURFACE.get_width() / 2, 20))
-    DISPLAY_SURFACE.blit(
-        p2_length_label,
-        (
-            DISPLAY_SURFACE.get_width() / 2
-            + sep_length_label.get_rect().width
-            + TILE_SIZE,
-            20,
-        ),
-    )
+    if not headless:
+        p1_length_label = FONT_SC.render(str(p1.length), 1, COLOR_P1)
+        sep_length_label = FONT_SC.render(":", 1, COLOR_FG)
+        p2_length_label = FONT_SC.render(str(p2.length), 1, COLOR_P2)
+        DISPLAY_SURFACE.blit(
+            p1_length_label,
+            (
+                DISPLAY_SURFACE.get_width() / 2
+                - p1_length_label.get_rect().width
+                - TILE_SIZE,
+                20,
+            ),
+        )
+        DISPLAY_SURFACE.blit(sep_length_label, (DISPLAY_SURFACE.get_width() / 2, 20))
+        DISPLAY_SURFACE.blit(
+            p2_length_label,
+            (
+                DISPLAY_SURFACE.get_width() / 2
+                + sep_length_label.get_rect().width
+                + TILE_SIZE,
+                20,
+            ),
+        )
 
     if logging:
         current_step.set_world_state(gs, food_drawn)
@@ -924,6 +966,8 @@ while winner == None:
 
     if winner != None:
         print(f"Player {winner} won!")
+        if headless:
+            exit(0)
         game_over_msg(winner)
     # debugging
     if DEBUG:
@@ -975,9 +1019,10 @@ while winner == None:
             )
 
     # update
-    CLOCK.tick(TPS)
-    # Save current world state to logging if true
-    pygame.display.update()
+    if not headless:
+        CLOCK.tick(TPS)
+        # Save current world state to logging if true
+        pygame.display.update()
 
 
 if logging:

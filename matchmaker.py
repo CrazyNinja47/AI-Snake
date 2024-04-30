@@ -3,8 +3,8 @@ import threading
 import queue
 
 
-games = 1
-batchSize = 1
+games = 10
+batchSize = 5
 
 setup = ["--headless", "--p1=minimax", "--p2=minimax"]
 
