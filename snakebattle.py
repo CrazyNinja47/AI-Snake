@@ -9,7 +9,7 @@ import copy
 import logger as logger
 import pickle
 
-# import neat
+import neat
 import math
 
 
@@ -457,6 +457,12 @@ arg_parser.add_argument(
     type=int,
     default=FRAME_RATE,
 )
+arg_parser.add_argument(
+    "--pos_x", type=int, default=0, help="Horizontal position of the window"
+)
+arg_parser.add_argument(
+    "--pos_y", type=int, default=0, help="Vertical position of the window"
+)
 
 args = arg_parser.parse_args()
 
@@ -475,11 +481,16 @@ if args.p2:
 if args.headless:
     headless = True
 
+if args.fps:
+    FRAME_RATE = args.fps
+
 import pygame
 
-if not headless:
+if headless:
     # center window
     os.environ["SDL_VIDEO_CENTERED"] = "1"
+else:
+    os.environ["SDL_VIDEO_WINDOW_POS"] = f"{args.pos_x},{args.pos_y}"
 
 
 # window dimensions

@@ -1,12 +1,16 @@
 import subprocess
 import threading
 import queue
+import math
 
+games = 9
+batchSize = 9
+tiled = False
 
-games = 10
-batchSize = 5
+setup = ["--fps=15", "--p1=neat", "--p2=minimax"]
 
-setup = ["--headless", "--p1=minimax", "--p2=minimax"]
+if not tiled:
+    setup.append("--headless")
 
 
 def run_game(script_path, *args):
@@ -27,16 +31,33 @@ def parse_winner(output):
     return "No winner found"
 
 
+size = math.ceil(math.sqrt(batchSize))
+
+
 def worker(game_queue, result_queue):
     while not game_queue.empty():
         try:
             game_id = game_queue.get_nowait()
-            output = run_game("snakebattle.py", *setup)
+            if tiled:
+                pos_x, pos_y = calculate_position(game_id, 300, 300, size, size)
+                output = run_game(
+                    "snakebattle.py", "--pos_x", str(pos_x), "--pos_y", str(pos_y)
+                )
+            else:
+                output = run_game("snakebattle.py", *setup)
             winner_line = parse_winner(output)
             print(f"Game #{game_id}: {winner_line}")
             result_queue.put(winner_line)
         finally:
             game_queue.task_done()
+
+
+def calculate_position(index, width, height, rows, columns):
+    row = index // columns
+    col = index % columns
+    pos_x = col * (width + 10) + 600
+    pos_y = row * (height + 10) + 200
+    return pos_x, pos_y
 
 
 def main(games, batchSize):
