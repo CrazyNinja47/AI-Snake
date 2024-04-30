@@ -1,5 +1,4 @@
 import argparse
-import pygame
 import sys
 import os
 import random
@@ -9,18 +8,18 @@ import astar as astar
 import copy
 import logger as logger
 import pickle
-import neat
+
+# import neat
 import math
 
 
-
 FRAME_RATE = 15
-MAP_SIZE = [30  , 30]
+MAP_SIZE = [30, 30]
 TILE_SIZE = 10
 START_LENGTH = 5
 
 debug = False
-logging = True
+logging = False
 
 headless = False
 MAX_DEPTH = 6
@@ -29,10 +28,11 @@ LOG_LIMIT = 12
 LOG_TYPE = "MinMax"
 LOG_NAME = "log"
 
-using_minimax_1 = False
+using_minimax_1 = True
 using_minimax_2 = True
 # Default P1
-using_NEAT_P1 = True
+using_NEAT_P1 = False
+using_NEAT_P2 = False
 # Name of the pickle file with the NEAT NN
 # It's not that impressive...
 P1_NEATFILE = "NEATNeuralWinner.pkl"
@@ -41,13 +41,14 @@ using_astar_1 = False
 using_astar_2 = False
 
 
-
-
 # Stores the GameState for use in AI.
 # Needs to be able to determine future states for minimax.
 class GameState:
     MAP_SIZE = MAP_SIZE
-    def __init__(self, player1=None, player2=None, food=None, winner=None, food_drawn =False):
+
+    def __init__(
+        self, player1=None, player2=None, food=None, winner=None, food_drawn=False
+    ):
         self.player1 = copy.deepcopy(player1)
         self.player2 = copy.deepcopy(player2)
         self.food = copy.deepcopy(food)
@@ -57,15 +58,15 @@ class GameState:
         self.player1_full = False
         self.player2_full = False
 
-    def get_square(self, x,y):
+    def get_square(self, x, y):
         # Is it our tail?
         for index, i in enumerate(self.player1.tail):
-                    if i[0] == x and i[1] == y:
-                        return 1
+            if i[0] == x and i[1] == y:
+                return 1
         # Is it their tail?
         for index, i in enumerate(self.player2.tail):
-                    if i[0] == x and i[1] == y:
-                        return 1
+            if i[0] == x and i[1] == y:
+                return 1
         # Is it outside?
         if x >= TILES_X or y >= TILES_Y or x < 0 or y < 0:
             return 1
@@ -73,8 +74,7 @@ class GameState:
         if x == self.food[0] and y == self.food[1]:
             return 2
         else:
-            return 0 
-
+            return 0
 
     ########  NEAT VISION METHODS  ########
 
@@ -82,13 +82,13 @@ class GameState:
         if self.player1.direction[0] == 0:
             return (self.player1.direction[1], self.player1.direction[0])
         else:
-            return (self.player1.direction[1]* (-1),self.player1.direction[0])
-    
+            return (self.player1.direction[1] * (-1), self.player1.direction[0])
+
     def get_right(self):
         if self.player1.direction[0] == 0:
             return (self.player1.direction[1] * (-1), self.player1.direction[0])
         else:
-            return (self.player1.direction[1] ,self.player1.direction[0])
+            return (self.player1.direction[1], self.player1.direction[0])
 
     def append_onehot(self, code, arr):
         # SAFE  DEATH   FOOD
@@ -114,25 +114,25 @@ class GameState:
             if self.player1.direction[1] == (-1):
                 # food is to the left of the player
                 if self.food[0] < self.player1.x:
-                    self.append_onehot(0,arr)
+                    self.append_onehot(0, arr)
                 # food is directly in front
                 elif self.food[0] == self.player1.x:
-                    self.append_onehot(1,arr)
+                    self.append_onehot(1, arr)
                 # food is to the right of player
                 elif self.food[0] > self.player1.x:
-                    self.append_onehot(2,arr)
+                    self.append_onehot(2, arr)
             # player facing down (we check food's X)
             if self.player1.direction[1] == (1):
                 # food is to the right of the player
                 if self.food[0] < self.player1.x:
-                    self.append_onehot(2,arr)
+                    self.append_onehot(2, arr)
                 # food is directly in front
                 elif self.food[0] == self.player1.x:
-                    self.append_onehot(1,arr)
+                    self.append_onehot(1, arr)
                 # food is to the left of player
                 elif self.food[0] > self.player1.x:
-                    self.append_onehot(0,arr)
-      
+                    self.append_onehot(0, arr)
+
         # LEFT/RIGHT SECTION
         # Could just else:  but left this for readability
         elif self.player1.direction[1] == 0:
@@ -140,27 +140,27 @@ class GameState:
             if self.player1.direction[0] == (-1):
                 # food is to the right of the player
                 if self.food[1] < self.player1.y:
-                    self.append_onehot(2,arr)
+                    self.append_onehot(2, arr)
                 # food is directly in front
                 elif self.food[1] == self.player1.y:
-                    self.append_onehot(1,arr)
+                    self.append_onehot(1, arr)
                 # food is to the left of player
                 elif self.food[1] > self.player1.y:
-                    self.append_onehot(0,arr)
+                    self.append_onehot(0, arr)
             # player facing right (we check food's Y)
             if self.player1.direction[0] == (1):
                 # food is to the left of the player
                 if self.food[1] < self.player1.y:
-                    self.append_onehot(0,arr)
+                    self.append_onehot(0, arr)
                 # food is directly in front
                 elif self.food[1] == self.player1.y:
-                    self.append_onehot(1,arr)
+                    self.append_onehot(1, arr)
                 # food is to the right of player
                 elif self.food[1] > self.player1.y:
-                    self.append_onehot(2,arr)
+                    self.append_onehot(2, arr)
 
     def snake_eyes(self):
-        #{[P1 X], [P1 Y], [P2 X], [P2 Y], [Food X], [Food Y]}
+        # {[P1 X], [P1 Y], [P2 X], [P2 Y], [Food X], [Food Y]}
         result = []
         # Tell snake which way to turn for food one hot-encoded
         #   0     1     2
@@ -169,38 +169,50 @@ class GameState:
         # Get distance from food, elucidian
         # if self.food[0]:
         self.append_food_side(result)
-        result.append( math.sqrt( ((self.player1.x - self.food[0]) ** 2) + ((self.player1.y - self.food[1]) ** 2)))
+        result.append(
+            math.sqrt(
+                ((self.player1.x - self.food[0]) ** 2)
+                + ((self.player1.y - self.food[1]) ** 2)
+            )
+        )
         # else:
-            #sometimes food doesn't exist, don't want to throw an error with a None
-            # No food, go right
-            # result.append(0)
-            # result.append(0)
-            # result.append(1)
-            # # distance
-            # result.append(0)
-        # Wall distances - top and left    
+        # sometimes food doesn't exist, don't want to throw an error with a None
+        # No food, go right
+        # result.append(0)
+        # result.append(0)
+        # result.append(1)
+        # # distance
+        # result.append(0)
+        # Wall distances - top and left
         result.append(self.player1.x)
         result.append(self.player1.y)
         # Wall distances - bottom and right
         result.append(abs(MAP_SIZE[0] - self.player1.x))
         result.append(abs(MAP_SIZE[1] - self.player1.y))
-        #Adding vision cone, in widening radius
-        #Going left to right
+        # Adding vision cone, in widening radius
+        # Going left to right
         vision = 2
         left = self.get_left()
         right = self.get_right()
         # Onehot Encode
         # EMPTY DANGER FOOD
         #   0      1    2
-        for i in range(1,vision + 1):
+        for i in range(1, vision + 1):
             # left:
-            spot = self.get_square((self.player1.x + (left[0] * i)),(self.player1.x + (left[1]* i)) )
-            self.append_onehot(spot,result)
+            spot = self.get_square(
+                (self.player1.x + (left[0] * i)), (self.player1.x + (left[1] * i))
+            )
+            self.append_onehot(spot, result)
             # center:
-            spot = self.get_square((self.player1.x + (self.player1.direction[0] * i)),(self.player1.x + (self.player1.direction[1] * i)) )
-            self.append_onehot(spot,result)
-            spot = self.get_square((self.player1.x + (right[0] * i)),(self.player1.x + (right[1]* i)) )
-            self.append_onehot(spot,result)
+            spot = self.get_square(
+                (self.player1.x + (self.player1.direction[0] * i)),
+                (self.player1.x + (self.player1.direction[1] * i)),
+            )
+            self.append_onehot(spot, result)
+            spot = self.get_square(
+                (self.player1.x + (right[0] * i)), (self.player1.x + (right[1] * i))
+            )
+            self.append_onehot(spot, result)
         return result
 
     ########  END OF NEAT VISION METHODS ########
@@ -210,9 +222,6 @@ class GameState:
     #     self.saved_Player2 = copy.deepcopy(self.saved_Player2)
     #     self.saved_Food = copy.deepcopy(self.saved_Food)
     #     self.winner = copy.deepcopy(self.saved_Winner)
-
-
-
 
     def update(self, player1, player2, food, winner, food_drawn):
         self.player1 = copy.deepcopy(player1)
@@ -227,9 +236,8 @@ class GameState:
             copy.deepcopy(self.player2),
             copy.deepcopy(self.food),
             copy.deepcopy(self.winner),
-            copy.deepcopy(self.food_drawn)
+            copy.deepcopy(self.food_drawn),
         )
-
 
     def is_terminal(self):
         return self.winner != None
@@ -263,7 +271,6 @@ class GameState:
         #     opp_direction = self_direction
         #     self_direction = temp
 
-
         if move == "LEFT":
             moving_player.left = True
             moving_player.right = False
@@ -279,12 +286,13 @@ class GameState:
         moving_player.x += moving_player.direction[0]
         moving_player.y += moving_player.direction[1]
 
-
-
         new_gs = state
         new_gs.winner = None
 
-        moving_player.last_Tail = (moving_player.tail[moving_player.length -1 ][0],(moving_player.tail[moving_player.length -1][1]))
+        moving_player.last_Tail = (
+            moving_player.tail[moving_player.length - 1][0],
+            (moving_player.tail[moving_player.length - 1][1]),
+        )
         for i in range(moving_player.length - 1, -1, -1):
             if i == 0:
                 moving_player.tail[i] = (moving_player.x, moving_player.y)
@@ -348,24 +356,32 @@ class GameState:
                     new_gs.winner = 0
 
         # check game over (touch)
-        if (target_player.x == opponent.x and target_player.y == opponent.y and new_gs.winner is None):
+        if (
+            target_player.x == opponent.x
+            and target_player.y == opponent.y
+            and new_gs.winner is None
+        ):
             new_gs.winner = 0
         else:
             # Check our tail
             # We killed them with our tail
             if new_gs.winner is None:
                 for index, i in enumerate(target_player.tail):
-                    #if debug: print(f'Checking P1: #{index} - ({i[0]},{i[1]})')
+                    # if debug: print(f'Checking P1: #{index} - ({i[0]},{i[1]})')
                     if i[0] == opponent.x and i[1] == opponent.y:
                         if new_gs.winner == None:
                             new_gs.winner = target_win
                             break
                         else:
                             new_gs.winner = 0
-                            break   
-            # We ate our own tail:
-                    #if debug: print(f'Comparing P1 head ({target_player.x},{target_player.y}) to its tail: #{index} - ({i[0]},{i[1]})')
-                    if index != 0 and i[0] == target_player.x and i[1] == target_player.y:
+                            break
+                    # We ate our own tail:
+                    # if debug: print(f'Comparing P1 head ({target_player.x},{target_player.y}) to its tail: #{index} - ({i[0]},{i[1]})')
+                    if (
+                        index != 0
+                        and i[0] == target_player.x
+                        and i[1] == target_player.y
+                    ):
                         if new_gs.winner == None:
                             new_gs.winner = opponent_win
                             break
@@ -396,16 +412,15 @@ class GameState:
 gs = GameState()
 
 
-
 # start arguments
 arg_parser = argparse.ArgumentParser()
 arg_parser.add_argument(
-    "-r",
-    "--raspi",
-    dest="raspi",
-    action="store_true",
-    help="run snake battle on a raspberry pi",
+    "--p1", type=str, help="AI type for Player 1 (minimax, NEAT, astar)"
 )
+arg_parser.add_argument(
+    "--p2", type=str, help="AI type for Player 2 (minimax, NEAT, astar)"
+)
+arg_parser.add_argument("--headless", action="store_true", help="Run in headless mode")
 arg_parser.add_argument(
     "-s",
     "--tilesize",
@@ -441,17 +456,26 @@ arg_parser.add_argument(
     type=int,
     default=FRAME_RATE,
 )
-arg_parser.add_argument(
-    "-b",
-    "--delay",
-    dest="delay",
-    metavar="MS",
-    help="button delay (raspi mode)",
-    type=int,
-    default=100,
-)
+
 args = arg_parser.parse_args()
-print(args)
+
+# Set AI types based on command line arguments
+if args.p1:
+    using_minimax_1 = args.p1.lower() == "minimax"
+    using_NEAT_P1 = args.p1.lower() == "neat"
+    using_astar_1 = args.p1.lower() == "astar"
+
+if args.p2:
+    using_minimax_2 = args.p2.lower() == "minimax"
+    using_NEAT_P2 = args.p2.lower() == "neat"
+    using_astar_2 = args.p2.lower() == "astar"
+
+# Set headless mode based on command line arguments
+if args.headless:
+    headless = True
+
+import pygame
+
 
 # center window
 os.environ["SDL_VIDEO_CENTERED"] = "1"
@@ -501,8 +525,6 @@ LEFT = (-1, 0)
 winner = None
 
 
-
-
 # print game over message
 def game_over_msg(winner):
     if winner == 0:
@@ -527,7 +549,6 @@ def game_over_msg(winner):
             p2_wins,
             (DISPLAY_SURFACE.get_width() / 2 - p2_wins.get_rect().width / 2, 200),
         )
-
 
 
 # food
@@ -589,7 +610,7 @@ for i in range(1, p2.length + 1):
 p2.last_Tail = None
 p2.just_ate = False
 
-main_log = logger.Log(LOG_LIMIT,LOG_TYPE, MAP_SIZE)
+main_log = logger.Log(LOG_LIMIT, LOG_TYPE, MAP_SIZE)
 
 # Initialize food right off bat
 safe_spot = False
@@ -605,22 +626,29 @@ if using_NEAT_P1:
     genome = None
     local_dir = os.path.dirname(__file__)
     config_path = os.path.join(local_dir, "NEATSnakeConfig.txt")
-    config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
-						neat.DefaultSpeciesSet, neat.DefaultStagnation,
-						config_path)
+    config = neat.Config(
+        neat.DefaultGenome,
+        neat.DefaultReproduction,
+        neat.DefaultSpeciesSet,
+        neat.DefaultStagnation,
+        config_path,
+    )
     with open(P1_NEATFILE, "rb") as f:
         genome = pickle.load(f)
     f.close()
     net = neat.nn.FeedForwardNetwork.create(genome, config)
-    
-
-
 
 
 # main loop
 while winner == None:
     current_step = logger.MinMax_Step()
-    gs.update(player1=p1, player2=p2, food=(food_x, food_y), winner=winner, food_drawn=food_drawn)
+    gs.update(
+        player1=p1,
+        player2=p2,
+        food=(food_x, food_y),
+        winner=winner,
+        food_drawn=food_drawn,
+    )
     p1.just_ate = False
     p2.just_ate = False
     # event queue
@@ -631,9 +659,9 @@ while winner == None:
             pygame.quit()
             sys.exit()
         # keyboard mode
-        elif event.type == KEYDOWN and not args.raspi:
-            if (event.key == K_DELETE):
-                #force draw
+        elif event.type == KEYDOWN:
+            if event.key == K_DELETE:
+                # force draw
                 winner = 0
             if (event.key == K_a) and not using_minimax_1:
                 p1.left = True
@@ -653,13 +681,13 @@ while winner == None:
                 p2.turn()
 
     if using_NEAT_P1:
-        #print("NN:\n {}".format(genome))
-        #print(f"{gs.snake_eyes()}")
+        # print("NN:\n {}".format(genome))
+        # print(f"{gs.snake_eyes()}")
         choices = net.activate(gs.snake_eyes())
         ourmax = max(choices)
-        #print(f"Our choices: {choices}")
+        # print(f"Our choices: {choices}")
         move = choices.index(ourmax)
-        #print(f"Snakeyes: picks {move} of {choices}")
+        # print(f"Snakeyes: picks {move} of {choices}")
         if move == 0:
             # Left
             p1.left = True
@@ -714,20 +742,16 @@ while winner == None:
             p2.right = True
             p2.turn()
 
-            
-
     p1.left = False
     p1.right = False
     p2.left = False
     p2.right = False
 
-
     # clear
     DISPLAY_SURFACE.fill(COLOR_BG)
 
-
     # draw head
-    if (not headless):
+    if not headless:
         pygame.draw.rect(DISPLAY_SURFACE, COLOR_P1, get_dimension(p1.x, p1.y, 1, 1))
         pygame.draw.rect(DISPLAY_SURFACE, COLOR_P2, get_dimension(p2.x, p2.y, 1, 1))
 
@@ -737,40 +761,38 @@ while winner == None:
     p2.x += p2.direction[0]
     p2.y += p2.direction[1]
 
-
     # move tail
-    p1.last_Tail = (p1.tail[p1.length -1 ][0],(p1.tail[p1.length -1][1]))
+    p1.last_Tail = (p1.tail[p1.length - 1][0], (p1.tail[p1.length - 1][1]))
     for i in range(p1.length - 1, -1, -1):
         if i == 0:
             p1.tail[i] = (p1.x, p1.y)
         else:
             p1.tail[i] = (p1.tail[i - 1][0], p1.tail[i - 1][1])
 
-    p2.last_Tail = (p2.tail[p2.length -1][0],(p2.tail[p2.length -1][1]))
+    p2.last_Tail = (p2.tail[p2.length - 1][0], (p2.tail[p2.length - 1][1]))
     for i in range(p2.length - 1, -1, -1):
         if i == 0:
             p2.tail[i] = (p2.x, p2.y)
         else:
             p2.tail[i] = (p2.tail[i - 1][0], p2.tail[i - 1][1])
 
-
     # draw tail
-    if (not headless):
+    if not headless:
         for i in p1.tail:
             pygame.draw.rect(DISPLAY_SURFACE, COLOR_P1, get_dimension(i[0], i[1], 1, 1))
         for i in p2.tail:
             pygame.draw.rect(DISPLAY_SURFACE, COLOR_P2, get_dimension(i[0], i[1], 1, 1))
 
-
-
     # food
     if food_drawn:
-        if (not headless):
-            pygame.draw.rect(DISPLAY_SURFACE, COLOR_FD, get_dimension(food_x, food_y, 1, 1))
+        if not headless:
+            pygame.draw.rect(
+                DISPLAY_SURFACE, COLOR_FD, get_dimension(food_x, food_y, 1, 1)
+            )
         if p1.x == food_x and p1.y == food_y:
             p1.tail.append(p1.last_Tail)
             p1.just_ate = True
-            #p1.tail.insert(0, (p1.x + p1.direction[0], p1.y + p1.direction[1]))
+            # p1.tail.insert(0, (p1.x + p1.direction[0], p1.y + p1.direction[1]))
             # p1.x = food_x + p1.direction[0]
             # p1.y = food_y + p1.direction[1]
             p1.length += 1
@@ -778,7 +800,7 @@ while winner == None:
         elif p2.x == food_x and p2.y == food_y:
             p2.tail.append(p2.last_Tail)
             p2.just_ate = True
-            #p2.tail.insert(0, (p2.x + p2.direction[0], p2.y + p2.direction[1]))
+            # p2.tail.insert(0, (p2.x + p2.direction[0], p2.y + p2.direction[1]))
             # p2.x = food_x + p2.direction[0]
             # p2.y = food_y + p2.direction[1]
             p2.length += 1
@@ -791,7 +813,9 @@ while winner == None:
             while not safe_spot:
                 food_x = random.choice(range(1, TILES_X - 1))
                 food_y = random.choice(range(1, TILES_Y - 1))
-                if (food_x != p1.x and food_y != p1.y) and (food_x != p2.x and food_y != p2.y):
+                if (food_x != p1.x and food_y != p1.y) and (
+                    food_x != p2.x and food_y != p2.y
+                ):
                     safe_spot = True
             food_drawn = True
 
@@ -827,53 +851,64 @@ while winner == None:
     if (p1.x >= TILES_X or p1.y >= TILES_Y or p1.x < 0 or p1.y < 0) and (
         p2.x >= TILES_X or p2.y >= TILES_Y or p2.x < 0 or p2.y < 0
     ):
-        if debug: print(f'Tie:  Both off screen')
+        if debug:
+            print(f"Tie:  Both off screen")
         winner = 0
     else:
         if p1.x >= TILES_X or p1.y >= TILES_Y or p1.x < 0 or p1.y < 0:
             if winner == None:
-                if debug: print(f'#2 wins:  1 went off screen')
+                if debug:
+                    print(f"#2 wins:  1 went off screen")
                 winner = 2
             else:
-                if debug: print(f'Tie:  1 off screen, 2 died...somehow?')
+                if debug:
+                    print(f"Tie:  1 off screen, 2 died...somehow?")
                 winner = 0
         elif p2.x >= TILES_X or p2.y >= TILES_Y or p2.x < 0 or p2.y < 0:
             if winner == None:
-                if debug: print(f'1 Wins:  2 went off screen')
+                if debug:
+                    print(f"1 Wins:  2 went off screen")
                 winner = 1
             else:
-                if debug: print(f'Tie:  2 Off screen, 1 died....somehow?')
+                if debug:
+                    print(f"Tie:  2 Off screen, 1 died....somehow?")
                 winner = 0
 
     # check game over (touch)
     if p1.x == p2.x and p1.y == p2.y:
-        if debug: print(f'Tie:  Head on collision')
+        if debug:
+            print(f"Tie:  Head on collision")
         winner = 0
     else:
         for index, i in enumerate(p1.tail):
             if i[0] == p2.x and i[1] == p2.y:
                 if winner == None:
-                    if debug: print(f'1 Wins:  2 ate P1 tail')
+                    if debug:
+                        print(f"1 Wins:  2 ate P1 tail")
                     winner = 1
                     break
                 else:
-                    if debug: print(f'Tie:  2 ate P1 tail....1 died...somehow?')
+                    if debug:
+                        print(f"Tie:  2 ate P1 tail....1 died...somehow?")
                     winner = 0
                     break
             if index != 0 and i[0] == p1.x and i[1] == p1.y:
                 if winner == None:
-                    if debug: print(f'2 Wins:  1 ate own tail')
+                    if debug:
+                        print(f"2 Wins:  1 ate own tail")
                     winner = 2
                     break
                 else:
-                    if debug: print(f'Tie:  1 ate own tail, but 2 died somehow?')
+                    if debug:
+                        print(f"Tie:  1 ate own tail, but 2 died somehow?")
                     winner = 0
                     break
         if winner is None:
             for index, i in enumerate(p2.tail):
                 if i[0] == p1.x and i[1] == p1.y:
                     if winner == None:
-                        if debug: print(f'2 Wins:  1 ate P2 tail')
+                        if debug:
+                            print(f"2 Wins:  1 ate P2 tail")
                         winner = 2
                         break
                     else:
@@ -888,9 +923,8 @@ while winner == None:
                         break
 
     if winner != None:
-        print(f'Player {winner} won!')
+        print(f"Player {winner} won!")
         game_over_msg(winner)
-
     # debugging
     if DEBUG:
         DISPLAY_SURFACE.blit(
@@ -947,11 +981,17 @@ while winner == None:
 
 
 if logging:
-    gs.update(player1=p1, player2=p2, food=(food_x, food_y), winner=winner, food_drawn=food_drawn)
+    gs.update(
+        player1=p1,
+        player2=p2,
+        food=(food_x, food_y),
+        winner=winner,
+        food_drawn=food_drawn,
+    )
     current_step.set_world_state(gs, food_drawn)
     main_log.add_step(current_step)
-    
-    with open(LOG_NAME + '.pkl', "wb") as f:
+
+    with open(LOG_NAME + ".pkl", "wb") as f:
         pickle.dump(main_log, f)
     f.close()
 pygame.time.wait(4000)

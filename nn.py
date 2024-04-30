@@ -17,6 +17,7 @@ output_size = 3  # left, straight, right
 # "left" -> 2
 # "right" -> 3
 
+
 class MyDataset(Dataset):
     def __init__(self, data, targets):
         self.data = data
@@ -27,16 +28,18 @@ class MyDataset(Dataset):
 
     def __getitem__(self, idx):
         return self.data[idx], self.targets[idx]
-    
-# input a bunch of game states for training 
-data = #get_state_representation(game_state)
 
-targets = [0,1,2,3]
+
+# input a bunch of game states for training
+data = None  # get_state_representation(game_state)
+
+targets = [0, 1, 2, 3]
 dataset = MyDataset(data, targets)
 
 batch_size = 32  # can be tuned
 shuffle = True  # Whether to shuffle the data
 train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+
 
 class SnakeNN(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
@@ -47,7 +50,6 @@ class SnakeNN(nn.Module):
         self.relu2 = nn.ReLU()
         self.fc3 = nn.Linear(hidden_size, output_size)
 
-        
     def forward(self, x):
         x = self.fc1(x)
         x = self.relu1(x)
@@ -94,9 +96,6 @@ class SnakeNN(nn.Module):
         print("Training complete")
 
 
-
-
-
 def get_state_representation(game_state):
     # Convert game state to tensor
     pass
@@ -105,5 +104,3 @@ def get_state_representation(game_state):
 def select_action(state, model):
     # Return a direction to snakebattle.py
     pass
-
-
