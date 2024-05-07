@@ -9,7 +9,6 @@ import copy
 import logger as logger
 import pickle
 
-import neat
 import math
 
 
@@ -28,8 +27,8 @@ LOG_LIMIT = 12
 LOG_TYPE = "MinMax"
 LOG_NAME = "log"
 
-using_minimax_1 = False
-using_minimax_2 = False
+using_minimax_1 = True
+using_minimax_2 = True
 # Default P1
 using_NEAT_P1 = False
 using_NEAT_P2 = False
@@ -38,7 +37,7 @@ using_NEAT_P2 = False
 P1_NEATFILE = "NEATNeuralWinner.pkl"
 P2_NEATFILE = "NEATNeuralWinner.pkl"
 
-using_astar_1 = True
+using_astar_1 = False
 using_astar_2 = False
 
 
@@ -673,9 +672,15 @@ if using_NEAT_P2:
     f.close()
     net = neat.nn.FeedForwardNetwork.create(genome, config)
 
+import csv
+file = open('game_data.csv', 'a', newline='')
+
+writer = csv.writer(file)
 # main loop
 while winner == None:
+    
     current_step = logger.MinMax_Step()
+    
     gs.update(
         player1=p1,
         player2=p2,
@@ -683,6 +688,7 @@ while winner == None:
         winner=winner,
         food_drawn=food_drawn,
     )
+   
     p1.just_ate = False
     p2.just_ate = False
     # event queue
@@ -761,6 +767,10 @@ while winner == None:
             p1.left = False
             p1.right = True
             p1.turn()
+        print(gs.to_string())
+        print(move)
+        data = [gs.player1.x, gs.player1.y, gs.player2.x, gs.player2.y, gs.food[0], gs.food[1], move, 'None' if gs.winner is None else 'true']
+        writer.writerow(data)
 
     if using_minimax_2:
         move = minimax.decide_move(gs, MAX_DEPTH, 2, current_step, logging)
@@ -774,7 +784,7 @@ while winner == None:
             p2.turn()
 
     if using_astar_1:
-        move = astar.decide_move(gs, gs.player1, p1.direction, p1.tail + p2.tail, MAP_SIZE, p2.tail)
+        move = astar.decide_move(gs, gs.player1, p1.direction, p1.tail[1:] + p2.tail)
         if move == "LEFT":
             p1.left = True
             p1.right = False
@@ -785,7 +795,7 @@ while winner == None:
             p1.turn()
 
     if using_astar_2:
-        move = astar.decide_move(gs, gs.player2, p2.direction, p1.tail + p2.tail, MAP_SIZE, p1.tail)
+        move = astar.decide_move(gs, gs.player2, p2.direction, p2.tail[1:] + p1.tail)
         if move == "LEFT":
             p2.left = True
             p2.right = False
@@ -976,6 +986,8 @@ while winner == None:
                         break
 
     if winner != None:
+        final = [gs.player1.x, gs.player1.y, gs.player2.x, gs.player2.y, gs.food[0], gs.food[1], move, 'None' if winner is None else winner]
+        writer.writerow(final)
         print(f"Player {winner} won!")
         if headless:
             exit(0)
