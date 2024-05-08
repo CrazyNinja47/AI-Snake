@@ -3,11 +3,11 @@ import threading
 import queue
 import math
 
-games = 100
-batchSize = 3
-tiled = False
+games = 9
+batchSize = 9
+tiled = True
 
-setup = ["--fps=15", "--p1=astar", "--p2=minimax"]
+setup = ["--fps=30", "--p1=minimax", "--p2=minimax"]
 
 if not tiled:
     setup.append("--headless")
@@ -55,8 +55,8 @@ def worker(game_queue, result_queue):
 def calculate_position(index, width, height, rows, columns):
     row = index // columns
     col = index % columns
-    pos_x = col * (width + 10) + 300
-    pos_y = row * (height + 10) + 100
+    pos_x = col * (width + 10) + 500
+    pos_y = row * (height + 10) + 200
     return pos_x, pos_y
 
 

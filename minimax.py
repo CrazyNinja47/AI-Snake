@@ -13,7 +13,7 @@ LOSE_WEIGHT = 3000
 DRAW_WEIGHT = 2000
 EDGE_WEIGHT = 5
 ENCLOSED_PENALTY = 100
-MAX_SQUARES_FLOODED = 75
+# MAX_SQUARES_FLOODED = 75
 
 debug = False
 
@@ -134,10 +134,10 @@ def heuristic(game_state, player, node):
         score += EDGE_WEIGHT
 
     if player == 1:
-        if is_enclosed(game_state, player1.x, player1.y):
+        if is_enclosed(game_state, player1.x, player1.y, player1.length):
             score -= ENCLOSED_PENALTY
     else:
-        if is_enclosed(game_state, player2.x, player2.y):
+        if is_enclosed(game_state, player2.x, player2.y, player2.length):
             score -= ENCLOSED_PENALTY
 
     if debug:
@@ -303,7 +303,7 @@ def decide_move(game_state, max_depth, player, step_logger, logging):
     return best_move
 
 
-def is_enclosed(game_state, start_x, start_y):
+def is_enclosed(game_state, start_x, start_y, length):
     directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
     visited = set()
     queue = deque([(start_x, start_y)])
@@ -317,7 +317,7 @@ def is_enclosed(game_state, start_x, start_y):
         visited.add((x, y))
         count += 1
 
-        if count > MAX_SQUARES_FLOODED:
+        if count > (length * 1.5):
             return False
 
         for dx, dy in directions:

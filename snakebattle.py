@@ -13,7 +13,7 @@ import neat
 import math
 
 
-FRAME_RATE = 60
+FRAME_RATE = 30
 MAP_SIZE = [30, 30]
 TILE_SIZE = 20
 START_LENGTH = 5
@@ -23,14 +23,14 @@ logging = False
 
 centered = True
 headless = False
-MAX_DEPTH = 4
+MAX_DEPTH = 2
 # Log the last XX moves (each move includes both players)
 LOG_LIMIT = 12
 LOG_TYPE = "MinMax"
 LOG_NAME = "log"
 
-using_minimax_1 = False
-using_minimax_2 = False
+using_minimax_1 = True
+using_minimax_2 = True
 # Default P1
 using_NEAT_P1 = False
 using_NEAT_P2 = False
@@ -39,7 +39,7 @@ using_NEAT_P2 = False
 P1_NEATFILE = "NEATNeuralWinner.pkl"
 P2_NEATFILE = "NEATNeuralWinner.pkl"
 
-using_astar_1 = True
+using_astar_1 = False
 using_astar_2 = False
 
 
