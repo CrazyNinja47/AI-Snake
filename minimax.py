@@ -13,7 +13,7 @@ LOSE_WEIGHT = 3000
 DRAW_WEIGHT = 2000
 EDGE_WEIGHT = 5
 ENCLOSED_PENALTY = 100
-MAX_SQUARES_FLOODED = 50
+MAX_SQUARES_FLOODED = 75
 
 debug = False
 
@@ -322,7 +322,8 @@ def is_enclosed(game_state, start_x, start_y):
 
         for dx, dy in directions:
             nx, ny = x + dx, y + dy
-            if game_state.get_square(nx, ny) == 0:
+            sqr = game_state.get_square(nx, ny)
+            if sqr != 1:
                 queue.append((nx, ny))
 
     return True
