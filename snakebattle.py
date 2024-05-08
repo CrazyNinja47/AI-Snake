@@ -521,7 +521,7 @@ def get_dimension(x, y, width=0, height=0):
 if not headless:
     # init
     pygame.init()
-    pygame.display.set_caption("Snake Battle by Scriptim")
+    pygame.display.set_caption("Snake Battle AI")
     CLOCK = pygame.time.Clock()
     DISPLAY_SURFACE = pygame.display.set_mode(
         (TILE_SIZE * TILES_X, TILE_SIZE * TILES_Y)
