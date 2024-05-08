@@ -13,7 +13,7 @@ import neat
 import math
 
 
-FRAME_RATE = 15
+FRAME_RATE = 60
 MAP_SIZE = [30, 30]
 TILE_SIZE = 10
 START_LENGTH = 5
@@ -21,8 +21,9 @@ START_LENGTH = 5
 debug = False
 logging = False
 
+centered = True
 headless = False
-MAX_DEPTH = 6
+MAX_DEPTH = 4
 # Log the last XX moves (each move includes both players)
 LOG_LIMIT = 12
 LOG_TYPE = "MinMax"
@@ -489,9 +490,10 @@ import pygame
 if headless:
     # center window
     os.environ["SDL_VIDEO_CENTERED"] = "1"
-else:
+elif not centered:
     os.environ["SDL_VIDEO_WINDOW_POS"] = f"{args.pos_x},{args.pos_y}"
-
+else:
+    os.environ["SDL_VIDEO_CENTERED"] = "1"
 
 # window dimensions
 TILE_SIZE = args.tilesize
