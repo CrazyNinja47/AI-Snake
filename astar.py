@@ -15,7 +15,7 @@ class AStar_Node():
         self.f = float('inf')
         self.parent = (0, 0)
 
-def heuristic(new_position, food_pos, opponent_tail):
+def heuristic(new_position, food_pos, opponent_tail, gs):
     distance_to_food = manhattan_distance(new_position, food_pos)
 
     #Penalty for being near other snake
@@ -27,7 +27,16 @@ def heuristic(new_position, food_pos, opponent_tail):
         np = ()
         count += 1
 
-    return distance_to_food - 0.5 + proximity_penalty
+    opposite_directions = {
+        (UP, DOWN), (DOWN, UP), (LEFT, RIGHT), (RIGHT, LEFT)
+    }
+
+    head_on_colision_penalty = 0
+    if (gs.player1.direction, gs.player1.direction) in opposite_directions and manhattan_distance(new_position, opposite_directions[1]) == 2:
+        head_on_colision_penalty = ('inf')
+
+
+    return distance_to_food - 0.5 * proximity_penalty + head_on_colision_penalty
 
 
 def manhattan_distance(a, b):
@@ -69,7 +78,7 @@ def get_path(explored_list_data, food_pos):
     path.insert(0, (x, y))
     return path
 
-def a_star_search(start_pos, food_pos, tail_locations, MAP_SIZE, opponent_tail):
+def a_star_search(start_pos, food_pos, tail_locations, MAP_SIZE, opponent_tail, gs):
 
 
     #Use an array for O(1) lookups
@@ -111,7 +120,7 @@ def a_star_search(start_pos, food_pos, tail_locations, MAP_SIZE, opponent_tail):
                     
                 else:
                     new_g = explored_list_data[x][y].g + 1
-                    new_h = heuristic(new_position, food_pos, opponent_tail)
+                    new_h = heuristic(new_position, food_pos, opponent_tail, gs)
                     new_f = new_g + new_h
 
                     if (current_successor_data.f == float('inf') or 
@@ -130,7 +139,7 @@ def decide_move(gs, player, current_direction, tail_locations, MAP_SIZE, opponen
 
     #Calculate AStar if food generated
     if gs.food != (None, None):
-        path = a_star_search(start_pos, gs.food, tail_locations, MAP_SIZE, opponent_tail)
+        path = a_star_search(start_pos, gs.food, tail_locations, MAP_SIZE, opponent_tail, gs)
 
         if path == None:
             return ""
