@@ -49,8 +49,7 @@ class QLearning:
             new_pred[i][torch.argmax(action[i]).item()] = Q_new
 
         self.optimizer.zero_grad()
-        loss = self.loss_function(new_pred, pred)
-        loss.backward()
+        self.loss_function(new_pred, pred).backward()
         self.optimizer.step()
 
     def next_move(self, state):
