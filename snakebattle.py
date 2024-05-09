@@ -9,7 +9,6 @@ import copy
 import logger as logger
 import pickle
 
-import neat
 import math
 
 
@@ -675,9 +674,15 @@ if using_NEAT_P2:
     f.close()
     net = neat.nn.FeedForwardNetwork.create(genome, config)
 
+import csv
+file = open('game_data.csv', 'a', newline='')
+
+writer = csv.writer(file)
 # main loop
 while winner == None:
+    
     current_step = logger.MinMax_Step()
+    
     gs.update(
         player1=p1,
         player2=p2,
@@ -685,6 +690,7 @@ while winner == None:
         winner=winner,
         food_drawn=food_drawn,
     )
+   
     p1.just_ate = False
     p2.just_ate = False
     # event queue
@@ -763,6 +769,10 @@ while winner == None:
             p1.left = False
             p1.right = True
             p1.turn()
+        print(gs.to_string())
+        print(move)
+        data = [gs.player1.x, gs.player1.y, gs.player2.x, gs.player2.y, gs.food[0], gs.food[1], move, 'None' if gs.winner is None else 'true']
+        writer.writerow(data)
 
     if using_minimax_2:
         move = minimax.decide_move(gs, MAX_DEPTH, 2, current_step, logging)
@@ -982,6 +992,8 @@ while winner == None:
                         break
 
     if winner != None:
+        final = [gs.player1.x, gs.player1.y, gs.player2.x, gs.player2.y, gs.food[0], gs.food[1], move, 'None' if winner is None else winner]
+        writer.writerow(final)
         print(f"Player {winner} won!")
         if headless:
             exit(0)
