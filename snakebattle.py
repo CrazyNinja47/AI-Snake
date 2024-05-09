@@ -12,16 +12,17 @@ import pickle
 import math
 
 
-FRAME_RATE = 15
+FRAME_RATE = 30
 MAP_SIZE = [30, 30]
-TILE_SIZE = 10
+TILE_SIZE = 20
 START_LENGTH = 5
 
 debug = False
 logging = False
 
+centered = True
 headless = False
-MAX_DEPTH = 6
+MAX_DEPTH = 2
 # Log the last XX moves (each move includes both players)
 LOG_LIMIT = 12
 LOG_TYPE = "MinMax"
@@ -488,9 +489,10 @@ import pygame
 if headless:
     # center window
     os.environ["SDL_VIDEO_CENTERED"] = "1"
-else:
+elif not centered:
     os.environ["SDL_VIDEO_WINDOW_POS"] = f"{args.pos_x},{args.pos_y}"
-
+else:
+    os.environ["SDL_VIDEO_CENTERED"] = "1"
 
 # window dimensions
 TILE_SIZE = args.tilesize
@@ -518,7 +520,7 @@ def get_dimension(x, y, width=0, height=0):
 if not headless:
     # init
     pygame.init()
-    pygame.display.set_caption("Snake Battle by Scriptim")
+    pygame.display.set_caption("Snake Battle AI")
     CLOCK = pygame.time.Clock()
     DISPLAY_SURFACE = pygame.display.set_mode(
         (TILE_SIZE * TILES_X, TILE_SIZE * TILES_Y)
@@ -784,7 +786,9 @@ while winner == None:
             p2.turn()
 
     if using_astar_1:
-        move = astar.decide_move(gs, gs.player1, p1.direction, p1.tail[1:] + p2.tail)
+        move = astar.decide_move(
+            gs, gs.player1, p1.direction, p1.tail + p2.tail, MAP_SIZE, p2.tail
+        )
         if move == "LEFT":
             p1.left = True
             p1.right = False
@@ -795,7 +799,9 @@ while winner == None:
             p1.turn()
 
     if using_astar_2:
-        move = astar.decide_move(gs, gs.player2, p2.direction, p2.tail[1:] + p1.tail)
+        move = astar.decide_move(
+            gs, gs.player2, p2.direction, p1.tail + p2.tail, MAP_SIZE, p1.tail
+        )
         if move == "LEFT":
             p2.left = True
             p2.right = False
